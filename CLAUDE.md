@@ -73,6 +73,21 @@ Based on Celeste/Hollow Knight analysis:
 - Failing tests reveal real problems that need solving
 - Tests protect game quality and prevent regressions
 
+## CRITICAL COMMIT RULES
+**NEVER COMMIT UNTIL ALL TESTS PASS AND USER CONFIRMS IT WORKS**
+- ALL tests must be green before any commit
+- User must see and confirm changes work in browser
+- No exceptions - quality over speed
+- Broken commits destroy project integrity
+
+## CRITICAL REGRESSION PREVENTION
+**ALWAYS RUN ALL TESTS AFTER ANY FEATURE/CHANGE**
+- After making any feature and confirming it works
+- After any code change, no matter how small
+- Run full test suite to ensure nothing was broken
+- Regressions are harder to fix than preventing them
+- One broken feature can cascade to break others
+
 ## Debug Tools Required
 - Collision box visualization
 - State machine display

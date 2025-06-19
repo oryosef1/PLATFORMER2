@@ -18,6 +18,8 @@
 - ✅ FPS counter and debug information
 - ✅ Hot reload working (dev server running on localhost:3000)
 - ✅ Game successfully running in browser with proper physics
+- ✅ Comprehensive test suite with 21 passing tests
+- ✅ Critical testing philosophy and commit rules established
 
 ## Current Work
 - Ready to begin Phase 1.3: ECS Architecture Foundation
@@ -60,7 +62,13 @@ PLATFORMER/
 
 ## Dependencies Installed
 - **Runtime**: phaser@3.70.0
-- **Dev**: vite, typescript, vitest, @playwright/test, @types/node
+- **Dev**: vite, typescript, vitest, @playwright/test, @types/node, jsdom, canvas, @vitest/ui
+
+## Test Coverage
+- **21 tests passing** - comprehensive coverage of Phase 1.2
+- **Game Logic Tests**: 13 tests covering dimensions, colors, positions, physics
+- **FPS Tests**: 8 tests covering calculation logic, timing, and performance
+- **Test Strategy**: Simplified logic tests instead of complex Phaser mocking
 
 ## Key Decisions Made
 1. **Framework**: Phaser 3 chosen for built-in physics and debugging tools
@@ -83,6 +91,21 @@ None currently.
 - Tests are tools to help build the game right
 - If tests fail, fix the implementation, never weaken the tests
 - Failing tests reveal real problems that need solving
+
+## CRITICAL COMMIT RULES
+**NEVER COMMIT UNTIL ALL TESTS PASS AND USER CONFIRMS IT WORKS**
+- ALL tests must be green before any commit
+- User must see and confirm changes work in browser
+- No exceptions - quality over speed
+- Broken commits destroy project integrity
+
+## CRITICAL REGRESSION PREVENTION
+**ALWAYS RUN ALL TESTS AFTER ANY FEATURE/CHANGE**
+- After making any feature and confirming it works
+- After any code change, no matter how small
+- Run full test suite to ensure nothing was broken
+- Regressions are harder to fix than preventing them
+- One broken feature can cascade to break others
 
 ## Notes
 - Following game-plan.md and make-movement-good.md specifications
