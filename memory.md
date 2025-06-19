@@ -2,8 +2,8 @@
 
 ## Current Status
 **Date**: 2025-06-19
-**Phase**: Phase 1.4 Input System with Buffering - COMPLETED ✅
-**Last Updated**: Input system implementation complete with all 67 tests passing
+**Phase**: Phase 2.1 Player Entity & Basic Movement - COMPLETED ✅
+**Last Updated**: Player entity implementation complete with all 89 tests passing
 
 ## Completed Features
 - ✅ Project initialization with Vite + TypeScript + Phaser 3
@@ -37,9 +37,19 @@
   - ✅ GameScene integration with dual input systems (Phaser + InputManager)
   - ✅ User testing completed and confirmed working
   - ✅ All 67 tests passing (18 input tests + 49 existing)
+- ✅ **Phase 2.1 Player Entity & Basic Movement - COMPLETED**
+  - ✅ PlayerEntity class with full ECS integration
+  - ✅ Horizontal movement with acceleration and speed limits
+  - ✅ Proper friction and air control systems
+  - ✅ Gravity system with terminal velocity
+  - ✅ Ground detection and collision response
+  - ✅ Visual representation with physics body integration
+  - ✅ Critical collision bug fixed (player no longer sinks into platforms)
+  - ✅ All 89 tests passing (22 PlayerEntity tests + 67 existing)
+  - ✅ User testing completed and confirmed working
 
 ## Current Work
-- Ready to begin Phase 2.1: Player Entity & Basic Movement
+- Ready to begin Phase 2.2: Enhanced Jumping System
 
 ## Important Learnings - WSL2 Development & Vite Setup
 1. **WSL2 Networking Issue**: WSL2 uses a virtual network adapter that doesn't always communicate well with Windows host
@@ -82,12 +92,13 @@ PLATFORMER/
 - **Dev**: vite, typescript, vitest, @playwright/test, @types/node, jsdom, canvas, @vitest/ui
 
 ## Test Coverage
-- **67 tests passing** - comprehensive coverage of Phases 1.2, 1.3, and 1.4
+- **89 tests passing** - comprehensive coverage of Phases 1.2, 1.3, 1.4, and 2.1
 - **Game Logic Tests**: 13 tests covering dimensions, colors, positions, physics
 - **FPS Tests**: 8 tests covering calculation logic, timing, and performance
 - **ECS Component Tests**: 15 tests covering PositionComponent and VelocityComponent
 - **ECS Entity Tests**: 13 tests covering Entity lifecycle and component management
 - **Input System Tests**: 18 tests covering InputManager, buffer system, and InputComponent
+- **Player Entity Tests**: 22 tests covering movement physics, gravity, ground detection, and collision
 - **Test Strategy**: Simplified logic tests instead of complex Phaser mocking
 
 ## Key Decisions Made
@@ -141,15 +152,17 @@ None currently.
 - Visual feedback priority for immediate development feedback
 - To run dev server: Use Windows PowerShell with `npm run dev`
 - Game features working: 
-  - Red rectangle player with arrow key movement
-  - Jump mechanics with gravity
-  - Green platforms for collision
-  - Debug info showing position
+  - Red rectangle player with ECS-based movement
+  - Advanced movement physics (acceleration, friction, air control)
+  - Gravity system with terminal velocity
+  - Proper collision detection and ground state management
+  - Green platforms for collision testing
+  - Debug info showing position, velocity, and ground state
   - FPS counter
   - Title screen with SPACE to start
-  - **NEW**: Input system with extensive console debugging
-  - **NEW**: Real-time input state display in game
-  - **NEW**: 10-frame input buffering for precise controls
+  - Input system with extensive console debugging
+  - Real-time input state display in game
+  - 10-frame input buffering for precise controls
 
 ## Console Debugging Features
 - Key press/release detection with frame numbers
@@ -157,3 +170,19 @@ None currently.
 - Movement state logging
 - Flag clearing notifications
 - Real-time active/buffered input display
+- Player movement physics debugging (position, velocity, ground state)
+- Collision detection logging
+
+## Critical Issues Resolved
+### Phase 2.1 Collision Detection Bug
+**Problem**: Player was sinking into platforms due to ECS and Phaser physics conflict
+- ECS system continued applying gravity and position updates
+- Phaser collision detection fired but only set ground state
+- Created infinite loop: player simultaneously "on ground" and "sinking through ground"
+
+**Solution**: Position correction on air-to-ground transition
+- Only correct position when transitioning from air to ground (`!wasGrounded && velocity.y > 0`)
+- Calculate exact platform surface position
+- Update ECS position to match corrected position
+- Removed physics body bounce (setBounce(0)) to prevent micro-shake
+- Result: Smooth landing with minimal acceptable shake

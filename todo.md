@@ -72,23 +72,29 @@
 ### Phase 2: Player Implementation (Week 2)
 **Goal**: Responsive player movement with tight controls
 
-#### 2.1 Player Entity & Basic Movement
-**Status**: 📋 Pending
+#### 2.1 Player Entity & Basic Movement ✅
+**Status**: ✅ COMPLETED with comprehensive tests
 
-**Tests to Write First**:
-- [ ] Test player entity creation
-- [ ] Test horizontal movement acceleration
-- [ ] Test movement speed limits
-- [ ] Test deceleration when input stops
-- [ ] Test air control reduction
+**Tests Completed**:
+- [x] Test player entity creation - 22 tests
+- [x] Test horizontal movement acceleration
+- [x] Test movement speed limits  
+- [x] Test deceleration when input stops
+- [x] Test air control reduction
+- [x] Test gravity system and terminal velocity
+- [x] Test ground detection system
+- [x] Test collision detection and position correction
+- [x] All 89 tests passing (22 PlayerEntity tests + 67 existing)
 
 **Sub-tasks**:
-- [ ] Create PlayerEntity class
-- [ ] Add horizontal movement with acceleration
-- [ ] Implement movement speed limits
-- [ ] Add basic gravity implementation
-- [ ] Create ground detection system
-- [ ] Add visual rectangle for player
+- [x] Create PlayerEntity class with ECS integration
+- [x] Add horizontal movement with acceleration
+- [x] Implement movement speed limits
+- [x] Add basic gravity implementation
+- [x] Create ground detection system
+- [x] Add visual rectangle for player
+- [x] Fix collision detection bug (player sinking into platforms)
+- [x] Implement proper collision response
 
 #### 2.2 Jump Mechanics
 **Status**: 📋 Pending
@@ -335,10 +341,11 @@
 - **Performance Tests**: Ensure 60fps with 100+ entities
 
 ## Current Priority
-Focus on Phase 2.1: Player Entity & Basic Movement
+Focus on Phase 2.2: Jump Mechanics
 
 ## Completed Phases
 - ✅ Phase 1.1: Basic Game Setup
 - ✅ Phase 1.2: Core Game Loop & Visual Output (21 tests passing)
 - ✅ Phase 1.3: ECS Architecture Foundation (49 tests passing total)
 - ✅ Phase 1.4: Input System with Buffering (67 tests passing total)
+- ✅ Phase 2.1: Player Entity & Basic Movement (89 tests passing total)
