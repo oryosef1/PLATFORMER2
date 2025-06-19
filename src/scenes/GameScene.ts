@@ -39,16 +39,13 @@ export class GameScene extends Phaser.Scene {
     // Player-platform collisions
     this.physics.add.collider(this.player, this.platforms);
     
-    // Create cursor keys
+    // Create cursor keys (arrow keys only)
     this.cursors = this.input.keyboard!.createCursorKeys();
-    
-    // Add WASD controls
-    const wasd = this.input.keyboard!.addKeys('W,S,A,D');
     
     // Debug info
     this.add.text(10, 50, 'Controls:', { fontSize: '16px', color: '#ffffff' });
-    this.add.text(10, 70, 'Arrow Keys or WASD to move', { fontSize: '14px', color: '#ffffff' });
-    this.add.text(10, 90, 'UP/W to jump', { fontSize: '14px', color: '#ffffff' });
+    this.add.text(10, 70, 'Arrow Keys to move', { fontSize: '14px', color: '#ffffff' });
+    this.add.text(10, 90, 'UP to jump', { fontSize: '14px', color: '#ffffff' });
     
     // Player position debug
     this.add.text(10, 120, 'Player Position:', { fontSize: '16px', color: '#ffffff' });

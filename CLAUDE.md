@@ -100,3 +100,8 @@ Based on Celeste/Hollow Knight analysis:
 - Test every feature thoroughly before moving to next
 - Update memory.md and todo.md consistently
 - Focus on tight, responsive controls above all else
+
+## Development Environment Notes
+- **Auto-Render**: Vite has auto-reload enabled - no need to restart server after code changes
+- **Dev Server**: Game automatically updates in browser when files are saved
+- **Control Scheme**: Movement is ONLY with arrow keys (no WASD support)
