@@ -22,14 +22,17 @@
 ## Current Work
 - Ready to begin Phase 1.3: ECS Architecture Foundation
 
-## Important Learnings - WSL2 Development
+## Important Learnings - WSL2 Development & Vite Setup
 1. **WSL2 Networking Issue**: WSL2 uses a virtual network adapter that doesn't always communicate well with Windows host
 2. **Solution**: Run dev server from Windows PowerShell instead of WSL
 3. **Steps to run**:
    - Use `powershell.exe -Command "cd C:\path; npm run dev"` from WSL
    - Or open PowerShell in Windows and run commands directly
 4. **Key Fix**: Vite config should use `host: true` for better compatibility
-5. **File Structure**: Keep index.html in public/ folder for Vite
+5. **CRITICAL Vite File Structure**: 
+   - **index.html MUST be in ROOT directory** for dev server to work
+   - public/ folder is for static assets only
+   - Had 404 errors until index.html was moved to root
 6. **Build Process**: `npm run build` creates dist/ folder with production files
 
 ## Project Structure
@@ -38,6 +41,7 @@ PLATFORMER/
 ├── CLAUDE.md          # AI instructions
 ├── memory.md          # This file - project memory
 ├── todo.md           # TDD-based task list
+├── index.html        # MAIN HTML FILE (required in root for Vite)
 ├── package.json      # Dependencies and scripts
 ├── vite.config.ts    # Vite configuration
 ├── tsconfig.json     # TypeScript configuration
@@ -51,7 +55,7 @@ PLATFORMER/
 │   ├── utils/        # Utilities
 │   └── data/         # Game data
 ├── tests/            # Test files
-└── public/           # Static assets
+└── public/           # Static assets (NO index.html here)
 ```
 
 ## Dependencies Installed
