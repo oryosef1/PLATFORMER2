@@ -80,6 +80,14 @@ Based on Celeste/Hollow Knight analysis:
 - No exceptions - quality over speed
 - Broken commits destroy project integrity
 
+## USER TESTING COMMUNICATION PROTOCOL
+**ALWAYS INFORM USER WHAT TO TEST WHEN REQUESTING CONFIRMATION**
+- Clearly explain what was added or changed in this implementation
+- Provide specific testing instructions for what the user should verify
+- List expected behaviors and what to look for in the browser
+- Include any new console output or debug information to check
+- Mention any new controls, features, or visual elements to test
+
 ## CRITICAL REGRESSION PREVENTION
 **ALWAYS RUN ALL TESTS AFTER ANY FEATURE/CHANGE**
 - After making any feature and confirming it works
@@ -105,3 +113,5 @@ Based on Celeste/Hollow Knight analysis:
 - **Auto-Render**: Vite has auto-reload enabled - no need to restart server after code changes
 - **Dev Server**: Game automatically updates in browser when files are saved
 - **Control Scheme**: Movement is ONLY with arrow keys (no WASD support)
+- **Console Debugging**: Always include extensive console.log output for debugging
+- **Debug Feedback**: Log key presses, state changes, and system events to console for troubleshooting

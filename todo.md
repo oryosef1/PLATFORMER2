@@ -47,23 +47,27 @@
 - [x] Arrow-only movement controls documented
 - [x] ECS foundation ready for systems implementation
 
-#### 1.4 Input System with Buffering
-**Status**: 📋 Pending
+#### 1.4 Input System with Buffering ✅
+**Status**: ✅ Completed with comprehensive tests
 
-**Tests to Write First**:
-- [ ] Test keyboard input detection
-- [ ] Test input buffer stores inputs correctly
-- [ ] Test buffer maintains 10-frame history
-- [ ] Test input buffer retrieval within time window
-- [ ] Test input state transitions
+**Tests Completed**:
+- [x] Test keyboard input detection - 18 tests
+- [x] Test input buffer stores inputs correctly
+- [x] Test buffer maintains 10-frame history
+- [x] Test input buffer retrieval within time window
+- [x] Test input state transitions
+- [x] All 67 tests passing with proper test coverage
 
 **Sub-tasks**:
-- [ ] Create InputManager class
-- [ ] Implement 10-frame input buffer
-- [ ] Add keyboard event handling
-- [ ] Create InputComponent for entities
-- [ ] Add debug display for input state
-- [ ] Test input responsiveness
+- [x] Create InputManager class
+- [x] Implement 10-frame input buffer
+- [x] Add keyboard event handling
+- [x] Create InputComponent for entities
+- [x] Add debug display for input state
+- [x] Test input responsiveness
+- [x] Integrate with GameScene
+- [x] Add extensive console debugging
+- [x] User testing completed and confirmed working
 
 ### Phase 2: Player Implementation (Week 2)
 **Goal**: Responsive player movement with tight controls
@@ -331,9 +335,10 @@
 - **Performance Tests**: Ensure 60fps with 100+ entities
 
 ## Current Priority
-Focus on Phase 1.4: Input System with Buffering
+Focus on Phase 2.1: Player Entity & Basic Movement
 
 ## Completed Phases
 - ✅ Phase 1.1: Basic Game Setup
 - ✅ Phase 1.2: Core Game Loop & Visual Output (21 tests passing)
 - ✅ Phase 1.3: ECS Architecture Foundation (49 tests passing total)
+- ✅ Phase 1.4: Input System with Buffering (67 tests passing total)
