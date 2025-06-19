@@ -65,6 +65,14 @@ Based on Celeste/Hollow Knight analysis:
 - Visual regression tests for rendering
 - Performance tests to maintain 60fps
 
+## CRITICAL TESTING PHILOSOPHY
+**NEVER DOWNGRADE TESTS TO MAKE THEM PASS - ALWAYS FIX THE PROBLEMS**
+- Goal is to make the GAME work correctly, not make tests green
+- Tests are tools to help build the game right
+- If tests fail, fix the implementation, never weaken the tests
+- Failing tests reveal real problems that need solving
+- Tests protect game quality and prevent regressions
+
 ## Debug Tools Required
 - Collision box visualization
 - State machine display

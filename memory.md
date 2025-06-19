@@ -77,6 +77,13 @@ PLATFORMER/
 ## Issues/Blockers
 None currently.
 
+## CRITICAL TESTING PHILOSOPHY
+**NEVER DOWNGRADE TESTS TO MAKE THEM PASS - ALWAYS FIX THE PROBLEMS**
+- Goal is to make the GAME work correctly, not make tests green
+- Tests are tools to help build the game right
+- If tests fail, fix the implementation, never weaken the tests
+- Failing tests reveal real problems that need solving
+
 ## Notes
 - Following game-plan.md and make-movement-good.md specifications
 - Emphasizing TDD approach with tests before features
