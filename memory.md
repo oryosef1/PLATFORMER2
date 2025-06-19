@@ -2,19 +2,35 @@
 
 ## Current Status
 **Date**: 2025-06-19
-**Phase**: Foundation Setup
-**Last Updated**: Initial project setup
+**Phase**: Foundation Complete - Phase 1.2 ✅
+**Last Updated**: Game running successfully from Windows
 
 ## Completed Features
 - ✅ Project initialization with Vite + TypeScript + Phaser 3
 - ✅ Basic project structure created
-- ✅ Git setup with .gitignore
+- ✅ Git setup with .gitignore and initial commit
 - ✅ Core configuration files (vite.config.ts, tsconfig.json)
 - ✅ Package.json with proper scripts
+- ✅ CLAUDE.md, memory.md, todo.md files created
+- ✅ Basic Phaser game with colored rectangle player
+- ✅ BootScene with loading screen and title (press SPACE to start)
+- ✅ GameScene with player movement and platforms
+- ✅ FPS counter and debug information
+- ✅ Hot reload working (dev server running on localhost:3000)
+- ✅ Game successfully running in browser with proper physics
 
 ## Current Work
-- 🔄 Setting up project files (CLAUDE.md, memory.md, todo.md)
-- 🔄 Creating initial Phaser game with visual output
+- Ready to begin Phase 1.3: ECS Architecture Foundation
+
+## Important Learnings - WSL2 Development
+1. **WSL2 Networking Issue**: WSL2 uses a virtual network adapter that doesn't always communicate well with Windows host
+2. **Solution**: Run dev server from Windows PowerShell instead of WSL
+3. **Steps to run**:
+   - Use `powershell.exe -Command "cd C:\path; npm run dev"` from WSL
+   - Or open PowerShell in Windows and run commands directly
+4. **Key Fix**: Vite config should use `host: true` for better compatibility
+5. **File Structure**: Keep index.html in public/ folder for Vite
+6. **Build Process**: `npm run build` creates dist/ folder with production files
 
 ## Project Structure
 ```
@@ -61,3 +77,11 @@ None currently.
 - Following game-plan.md and make-movement-good.md specifications
 - Emphasizing TDD approach with tests before features
 - Visual feedback priority for immediate development feedback
+- To run dev server: Use Windows PowerShell with `npm run dev`
+- Game features working: 
+  - Red rectangle player with arrow key movement
+  - Jump mechanics with gravity
+  - Green platforms for collision
+  - Debug info showing position
+  - FPS counter
+  - Title screen with SPACE to start

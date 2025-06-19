@@ -2,9 +2,13 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   server: {
+    host: true,
     port: 3000,
-    open: true,
-    hmr: true
+    open: false,
+    hmr: true,
+    watch: {
+      usePolling: true
+    }
   },
   build: {
     target: 'esnext',
