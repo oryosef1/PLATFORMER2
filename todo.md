@@ -96,24 +96,31 @@
 - [x] Fix collision detection bug (player sinking into platforms)
 - [x] Implement proper collision response
 
-#### 2.2 Jump Mechanics
-**Status**: 📋 Pending
+#### 2.2 Enhanced Jumping System ✅
+**Status**: ✅ COMPLETED with comprehensive tests
 
-**Tests to Write First**:
-- [ ] Test minimum jump height (4 units)
-- [ ] Test maximum jump height (8 units)
-- [ ] Test variable jump (hold for higher)
-- [ ] Test coyote time (6 frames after leaving ground)
-- [ ] Test jump buffering (10 frames)
-- [ ] Test double jump mechanics
+**Tests Completed**:
+- [x] Test minimum jump height (300 px/s) - 19 tests
+- [x] Test maximum jump height (500 px/s) with variable scaling
+- [x] Test variable jump height based on hold duration (12 frames)
+- [x] Test coyote time system (6 frames after leaving ground)
+- [x] Test jump buffering system (10 frames input window)
+- [x] Test double jump mechanics (UP+UP instead of UP+SPACE)
+- [x] Test jump state management and cancellation
+- [x] Test jump physics integration with movement constants
+- [x] All 108 tests passing (19 jump tests + 89 existing)
 
 **Sub-tasks**:
-- [ ] Implement variable height jumping
-- [ ] Add coyote time system
-- [ ] Create jump buffering
-- [ ] Implement double jump
-- [ ] Add jump state tracking
-- [ ] Test edge cases (multiple jumps, etc.)
+- [x] Implement variable height jumping with hold scaling
+- [x] Add coyote time system with 6-frame grace period
+- [x] Create jump buffering with 10-frame input window
+- [x] Implement double jump with UP+UP controls
+- [x] Add comprehensive jump state tracking
+- [x] Fix input timing bug (InputManager update order)
+- [x] Fix coyote time small jump issue
+- [x] Fix collision detection for side vs top platform hits
+- [x] Add proper rendering depth (player on top of platforms)
+- [x] Test and debug all edge cases
 
 #### 2.3 Collision System
 **Status**: 📋 Pending
@@ -341,7 +348,7 @@
 - **Performance Tests**: Ensure 60fps with 100+ entities
 
 ## Current Priority
-Focus on Phase 2.2: Jump Mechanics
+Focus on Phase 2.3: Collision System
 
 ## Completed Phases
 - ✅ Phase 1.1: Basic Game Setup
@@ -349,3 +356,4 @@ Focus on Phase 2.2: Jump Mechanics
 - ✅ Phase 1.3: ECS Architecture Foundation (49 tests passing total)
 - ✅ Phase 1.4: Input System with Buffering (67 tests passing total)
 - ✅ Phase 2.1: Player Entity & Basic Movement (89 tests passing total)
+- ✅ Phase 2.2: Enhanced Jumping System (108 tests passing total)

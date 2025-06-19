@@ -21,6 +21,14 @@ export class MovementConstants {
   public static readonly GRAVITY = 980; // pixels/second² (earth-like)
   public static readonly TERMINAL_VELOCITY = 500; // max fall speed
   
+  // Jumping System
+  public static readonly MIN_JUMP_VELOCITY = 300; // minimum jump speed (pixels/second)
+  public static readonly MAX_JUMP_VELOCITY = 500; // maximum jump speed (pixels/second)
+  public static readonly DOUBLE_JUMP_VELOCITY = 450; // double jump speed (pixels/second)
+  public static readonly JUMP_HOLD_FRAMES = 12; // frames to hold for max jump (0.2 seconds at 60fps)
+  public static readonly COYOTE_TIME_FRAMES = 6; // frames of grace period after leaving ground
+  public static readonly JUMP_BUFFER_FRAMES = 10; // frames to buffer jump input
+  
   // Player Dimensions
   public static readonly PLAYER_WIDTH = 32; // pixels
   public static readonly PLAYER_HEIGHT = 48; // pixels

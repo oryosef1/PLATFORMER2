@@ -2,8 +2,8 @@
 
 ## Current Status
 **Date**: 2025-06-19
-**Phase**: Phase 2.1 Player Entity & Basic Movement - COMPLETED ✅
-**Last Updated**: Player entity implementation complete with all 89 tests passing
+**Phase**: Phase 2.2 Enhanced Jumping System - COMPLETED ✅
+**Last Updated**: Enhanced jumping system complete with all 108 tests passing
 
 ## Completed Features
 - ✅ Project initialization with Vite + TypeScript + Phaser 3
@@ -47,9 +47,21 @@
   - ✅ Critical collision bug fixed (player no longer sinks into platforms)
   - ✅ All 89 tests passing (22 PlayerEntity tests + 67 existing)
   - ✅ User testing completed and confirmed working
+- ✅ **Phase 2.2 Enhanced Jumping System - COMPLETED**
+  - ✅ Variable jump height system (hold UP for 12 frames: 300-500 px/s scaling)
+  - ✅ Coyote time system (6-frame grace period after leaving ground)
+  - ✅ Jump buffering system (10-frame input window for smooth controls)
+  - ✅ Double jump mechanics (UP+UP instead of UP+SPACE)
+  - ✅ Jump state management and cancellation system
+  - ✅ Input timing bug fixed (InputManager update order corrected)
+  - ✅ Coyote time small jump issue resolved
+  - ✅ Smart collision detection (side vs top platform detection)
+  - ✅ Proper rendering depth (player appears on top of platforms)
+  - ✅ All 108 tests passing (19 jump tests + 89 existing)
+  - ✅ User testing completed and confirmed working
 
 ## Current Work
-- Ready to begin Phase 2.2: Enhanced Jumping System
+- Ready to begin Phase 2.3: Collision System
 
 ## Important Learnings - WSL2 Development & Vite Setup
 1. **WSL2 Networking Issue**: WSL2 uses a virtual network adapter that doesn't always communicate well with Windows host
@@ -92,13 +104,14 @@ PLATFORMER/
 - **Dev**: vite, typescript, vitest, @playwright/test, @types/node, jsdom, canvas, @vitest/ui
 
 ## Test Coverage
-- **89 tests passing** - comprehensive coverage of Phases 1.2, 1.3, 1.4, and 2.1
+- **108 tests passing** - comprehensive coverage of Phases 1.2, 1.3, 1.4, 2.1, and 2.2
 - **Game Logic Tests**: 13 tests covering dimensions, colors, positions, physics
 - **FPS Tests**: 8 tests covering calculation logic, timing, and performance
 - **ECS Component Tests**: 15 tests covering PositionComponent and VelocityComponent
 - **ECS Entity Tests**: 13 tests covering Entity lifecycle and component management
 - **Input System Tests**: 18 tests covering InputManager, buffer system, and InputComponent
 - **Player Entity Tests**: 22 tests covering movement physics, gravity, ground detection, and collision
+- **Jump System Tests**: 19 tests covering variable height, coyote time, buffering, double jump, and state management
 - **Test Strategy**: Simplified logic tests instead of complex Phaser mocking
 
 ## Key Decisions Made
@@ -186,3 +199,26 @@ None currently.
 - Update ECS position to match corrected position
 - Removed physics body bounce (setBounce(0)) to prevent micro-shake
 - Result: Smooth landing with minimal acceptable shake
+
+### Phase 2.2 Critical Issues Resolved
+**Problem**: Multiple jumping system issues after initial implementation
+1. **Input Timing Bug**: InputManager.update() called before jump input detection
+   - Jump input flags cleared before they could be used
+   - **Solution**: Capture input states before calling inputManager.update()
+
+2. **Coyote Time Small Jumps**: Coyote time jumps used minimum velocity only
+   - **Solution**: Use proper jump velocity scaling for all jump types
+
+3. **Variable Jump Height Not Working**: Hold vs tap produced same results
+   - **Solution**: Redesigned updateJump() to properly handle key press duration
+
+4. **Platform Teleportation Bug**: Player teleported to platform top when hitting sides
+   - **Solution**: Smart collision detection with geometric checks for top vs side hits
+
+5. **Rendering Order Issue**: Player rendered behind platforms
+   - **Solution**: Set depth values (platforms=0, player=100)
+
+6. **Double Jump Controls**: User wanted UP+UP instead of UP+SPACE
+   - **Solution**: Modified jump logic to try double jump if regular jump fails
+
+**Result**: All jumping mechanics working perfectly with 108 tests passing
