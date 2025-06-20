@@ -96,6 +96,7 @@
 
 ## Current Work
 - Phase 2.4 Advanced Movement completed successfully with Hollow Knight-style dash mechanics and critical double jump bug fix
+- Pogo jumping correctly identified as combat mechanic and moved to Phase 3.1.1
 - Ready to begin Phase 3.1: Combat System Foundation (hitbox/hurtbox system, melee attacks)
 
 ## Important Learnings - WSL2 Development & Vite Setup

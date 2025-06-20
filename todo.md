@@ -204,6 +204,30 @@
 - [ ] Add invincibility frames
 - [ ] Implement screen shake on hit
 
+#### 3.1.1 Pogo Jumping (Combat-Movement Integration)
+**Status**: 📋 Pending
+
+**Tests to Write First**:
+- [ ] Test downward attack input detection (DOWN + X)
+- [ ] Test downward attack hitbox creation
+- [ ] Test pogo bounce velocity calculation
+- [ ] Test pogo bounce on enemy/object hit
+- [ ] Test pogo chain mechanics (infinite bounces)
+- [ ] Test pogo success window timing
+- [ ] Test pogo vs regular downward dash distinction
+
+**Sub-tasks**:
+- [ ] Add DOWN + X input combination detection
+- [ ] Create downward attack hitbox component
+- [ ] Implement pogo bounce mechanics (reset fall velocity, add upward force)
+- [ ] Add bounce target detection system
+- [ ] Create test enemies/objects for pogo targets
+- [ ] Implement pogo chain potential (infinite bounces with timing)
+- [ ] Add visual/audio feedback for successful pogo
+- [ ] Test pogo integration with existing dash system
+- [ ] Add pogo success window (brief time after attack connects)
+- [ ] User testing for pogo feel and responsiveness
+
 #### 3.2 Enemy System
 **Status**: 📋 Pending
 
@@ -374,6 +398,7 @@
 
 ## Current Priority
 Focus on Phase 3.1: Combat System Foundation (hitbox/hurtbox system, melee attacks)
+Note: Pogo jumping moved to Phase 3.1.1 as it requires combat system infrastructure
 
 ## Completed Phases
 - ✅ Phase 1.1: Basic Game Setup
