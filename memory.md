@@ -2,8 +2,8 @@
 
 ## Current Status
 **Date**: 2025-06-20
-**Phase**: Phase 2.3 Collision System - COMPLETED
-**Last Updated**: Collision system completed with critical architecture fixes, ready for Phase 2.4
+**Phase**: Phase 2.4 Advanced Movement - COMPLETED
+**Last Updated**: Dash and sprint mechanics completed with Hollow Knight-style implementation and critical double jump bug fixed, ready for Phase 3.1
 
 ## Completed Features
 - ✅ Project initialization with Vite + TypeScript + Phaser 3
@@ -76,10 +76,27 @@
   - ✅ Simplified collision system architecture for reliability and maintainability
   - ✅ All 142 tests passing (34 collision tests + 108 existing)
   - ✅ User testing completed and confirmed working
+- ✅ **Phase 2.4 Advanced Movement - COMPLETED**
+  - ✅ Wall detection system with left/right contact tracking
+  - ✅ Wall sliding mechanics with consistent 60 px/s fall speed
+  - ✅ Wall jumping system with proper directional velocity
+  - ✅ Wall jump coyote time (6-frame grace period after leaving wall)
+  - ✅ Wall jump control lockout (4 frames) and cooldown system (8 frames)
+  - ✅ **Hollow Knight-style dash mechanics**: Facing-based dash direction (not input-based)
+  - ✅ Dash system with cooldown (60 frames), duration (8 frames), and invincibility (6 frames)
+  - ✅ Downward dash support (X+DOWN for downward dash like Dashmaster charm)
+  - ✅ Sprint system with stamina management (300 frames max, drain rate 2/frame, regen 1/frame)
+  - ✅ Sprint speed and acceleration multipliers (1.5x speed, 1.3x acceleration)
+  - ✅ Dash and sprint integration (can dash while sprinting, sprint continues after dash)
+  - ✅ **CRITICAL GAME DESIGN**: Wall interactions NEVER restore double jump (only ground landing)
+  - ✅ **CRITICAL BUG FIX**: Fixed double jump consumption during key holding
+  - ✅ Jump action consumption flag prevents multiple jumps per key press
+  - ✅ All 204 tests passing (32 dash/sprint tests + 172 existing)
+  - ✅ User testing completed and confirmed working
 
 ## Current Work
-- Phase 2.3 Collision System completed successfully
-- Ready to begin Phase 2.4: Advanced Movement (wall sliding, wall jumping, dash mechanics)
+- Phase 2.4 Advanced Movement completed successfully with Hollow Knight-style dash mechanics and critical double jump bug fix
+- Ready to begin Phase 3.1: Combat System Foundation (hitbox/hurtbox system, melee attacks)
 
 ## Important Learnings - WSL2 Development & Vite Setup
 1. **WSL2 Networking Issue**: WSL2 uses a virtual network adapter that doesn't always communicate well with Windows host
@@ -122,7 +139,7 @@ PLATFORMER/
 - **Dev**: vite, typescript, vitest, @playwright/test, @types/node, jsdom, canvas, @vitest/ui
 
 ## Test Coverage
-- **142 tests passing** - comprehensive coverage of Phases 1.2, 1.3, 1.4, 2.1, 2.2, and 2.3
+- **204 tests passing** - comprehensive coverage of Phases 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, and 2.4
 - **Game Logic Tests**: 13 tests covering dimensions, colors, positions, physics
 - **FPS Tests**: 8 tests covering calculation logic, timing, and performance
 - **ECS Component Tests**: 15 tests covering PositionComponent and VelocityComponent
@@ -131,6 +148,8 @@ PLATFORMER/
 - **Player Entity Tests**: 22 tests covering movement physics, gravity, ground detection, and collision
 - **Jump System Tests**: 19 tests covering variable height, coyote time, buffering, double jump, and state management
 - **Collision System Tests**: 34 tests covering AABB detection, collision response, spatial hashing, and collision normals
+- **Wall Mechanics Tests**: 30 tests covering wall detection, sliding, jumping, and cooldown systems
+- **Dash/Sprint Tests**: 32 tests covering Hollow Knight-style dash mechanics and sprint stamina management
 - **Test Strategy**: Simplified logic tests instead of complex Phaser mocking
 
 ## Key Decisions Made
@@ -308,3 +327,32 @@ None currently.
 - **Clear game rules**: Only ground landing restores double jump, creating strategic depth
 - **Smooth wall-to-wall movement**: Proper timing prevents sticky or erratic behavior
 - **All 172 tests passing**: Comprehensive coverage with no regressions
+
+### Phase 2.4 Critical Double Jump Input Bug
+**Problem**: Double jump being consumed during variable jump height key holding
+- When holding UP for variable jump height, input system triggered multiple "just pressed" events
+- System executed both ground jump AND double jump from single key press
+- Double jump became unavailable immediately after first jump
+
+**Root Cause Analysis**: 
+- Input detection logic checked both InputManager and Phaser.Input.Keyboard with OR logic
+- Multiple input systems caused duplicate "just pressed" detection during key hold
+- No mechanism to prevent multiple jump actions per key press sequence
+
+**Solution Strategy**: **Jump Action Consumption Flag**
+- Added `jumpActionConsumed` boolean flag to PlayerEntity
+- Jump actions (ground jump, double jump, wall jump) set this flag when executed
+- Jump input logic only processes if flag hasn't been set yet
+- Flag resets when UP key is released
+
+**Technical Implementation**:
+1. **Added jumpActionConsumed flag** to PlayerEntity for tracking jump action state
+2. **Modified GameScene input logic** to check `!hasJumpActionBeenConsumed()` before processing
+3. **Updated all jump methods** to set consumption flag when executed
+4. **Added flag reset** on UP key release to allow next jump sequence
+
+**Result**: 
+- **Single jump per key press**: Each UP key press sequence only triggers one jump action
+- **Variable jump height preserved**: Can still hold UP for higher jumps without consuming double jump
+- **Double jump requires separate press**: Must release and press UP again for double jump
+- **All 204 tests passing**: No regressions, improved input reliability

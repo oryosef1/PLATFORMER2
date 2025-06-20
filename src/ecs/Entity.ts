@@ -19,8 +19,8 @@ export class Entity {
     this.components.set(type, component);
   }
 
-  public getComponent(type: string): IComponent | undefined {
-    return this.components.get(type);
+  public getComponent<T extends IComponent>(type: string): T | undefined {
+    return this.components.get(type) as T | undefined;
   }
 
   public hasComponent(type: string): boolean {

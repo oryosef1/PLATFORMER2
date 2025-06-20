@@ -51,6 +51,21 @@ export class MovementConstants {
   public static readonly WALL_JUMP_CONTROL_LOCKOUT_FRAMES = 4; // frames where horizontal input is ignored after wall jump
   public static readonly WALL_DETECTION_OFFSET = 2; // pixels to check for wall proximity
   public static readonly WALL_COYOTE_TIME_FRAMES = 6; // frames of grace period after leaving wall
+  
+  // Dash Mechanics
+  public static readonly DASH_DISTANCE = 120; // pixels (distance covered in dash)
+  public static readonly DASH_DURATION_FRAMES = 8; // frames dash lasts (about 0.13 seconds)
+  public static readonly DASH_VELOCITY = 900; // pixels/second (calculated: 120px / (8 * 1/60)s = 900px/s)
+  public static readonly DASH_COOLDOWN_FRAMES = 60; // frames before dash can be used again (1 second)
+  public static readonly DASH_INVINCIBILITY_FRAMES = 6; // frames of invincibility during dash
+  
+  // Sprint Mechanics
+  public static readonly SPRINT_SPEED_MULTIPLIER = 1.5; // 150% of normal speed when sprinting
+  public static readonly SPRINT_ACCELERATION_MULTIPLIER = 1.3; // 130% acceleration when sprinting
+  public static readonly SPRINT_STAMINA_MAX = 300; // frames of max stamina (5 seconds)
+  public static readonly SPRINT_STAMINA_DRAIN_RATE = 2; // stamina points drained per frame while sprinting
+  public static readonly SPRINT_STAMINA_REGEN_RATE = 1.5; // stamina points restored per frame when not sprinting
+  public static readonly SPRINT_MIN_STAMINA = 10; // minimum stamina needed to start sprinting (reduced for smoother restart)
 }
 
 console.log('[PHYSICS] MovementConstants loaded:', {

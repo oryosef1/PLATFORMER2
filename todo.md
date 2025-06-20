@@ -147,8 +147,8 @@
 - [x] Simplify collision architecture for reliability and maintainability
 - [x] User testing completed and confirmed working
 
-#### 2.4 Advanced Movement
-**Status**: ✅ COMPLETED with comprehensive tests and critical fixes
+#### 2.4 Advanced Movement ✅
+**Status**: ✅ COMPLETED with comprehensive tests and Hollow Knight-style dash mechanics
 
 **Tests Completed**:
 - [x] Test wall detection (left, right, both walls) - 4 tests
@@ -157,7 +157,10 @@
 - [x] Test wall jump control lockout system - 3 tests
 - [x] Test wall mechanics integration - 3 tests
 - [x] Test wall jump cooldown prevention - 6 tests
-- [x] All 30 wall mechanics tests passing (172 tests total)
+- [x] Test dash mechanics (facing-based direction, cooldown, duration) - 16 tests
+- [x] Test sprint mechanics (stamina management, speed multipliers) - 14 tests
+- [x] Test dash/sprint integration (combined usage, priority handling) - 2 tests
+- [x] All 62 advanced movement tests passing (204 tests total)
 
 **Sub-tasks**:
 - [x] Implement wall detection system (left/right wall contact)
@@ -169,13 +172,16 @@
 - [x] **CRITICAL FIX**: Wall jumps NEVER restore double jump
 - [x] Fix gravity conflicts with wall sliding
 - [x] Eliminate wall jump spam exploits
+- [x] **Hollow Knight-style dash mechanics**: Facing-based dash direction implementation
+- [x] Add dash system with cooldown (60 frames), duration (8 frames), invincibility (6 frames)
+- [x] Implement downward dash support (X+DOWN for Dashmaster-style downward dash)
+- [x] Create sprint system with stamina management (300 max, 2 drain/frame, 1 regen/frame)
+- [x] Add sprint speed multipliers (1.5x speed, 1.3x acceleration)
+- [x] Implement dash/sprint integration (dash while sprinting, sprint continues after dash)
+- [x] Update GameScene input handling for X key (dash) and Shift key (sprint)
+- [x] **CRITICAL FIX**: Fixed double jump consumption bug during key holding
+- [x] Added jump action consumption flag to prevent multiple jumps per key press
 - [x] User testing completed and confirmed working
-
-**Dash mechanics moved to future phase**:
-- [ ] Create dash mechanic
-- [ ] Add dash cooldown system
-- [ ] Implement sprint functionality
-- [ ] Setup pogo jumping foundation
 
 ### Phase 3: Combat & Enemies (Week 3)
 **Goal**: Engaging combat with varied enemy types
@@ -377,4 +383,4 @@ Focus on Phase 3.1: Combat System Foundation (hitbox/hurtbox system, melee attac
 - ✅ Phase 2.1: Player Entity & Basic Movement (89 tests passing total)
 - ✅ Phase 2.2: Enhanced Jumping System (108 tests passing total)
 - ✅ Phase 2.3: Collision System with Critical Architecture Fixes (142 tests passing total)
-- ✅ Phase 2.4: Advanced Movement - Wall Mechanics (172 tests passing total)
+- ✅ Phase 2.4: Advanced Movement with Dash & Sprint Mechanics (204 tests passing total)

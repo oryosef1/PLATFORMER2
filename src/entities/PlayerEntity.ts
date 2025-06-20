@@ -22,6 +22,7 @@ export class PlayerEntity extends Entity {
   private coyoteTimeFrames: number = 0;
   private jumpBufferFrames: number = 0;
   private hasDoubleJump: boolean = true;
+  private jumpActionConsumed: boolean = false; // Prevents multiple jump actions per key press
   
   // Wall mechanics state
   private touchingWallLeft: boolean = false;
@@ -32,6 +33,19 @@ export class PlayerEntity extends Entity {
   private wallCoyoteTimeFrames: number = 0; // grace period after leaving wall
   private recentWallContactFrames: number = 0; // tracks recent wall contact to prevent vertical jumps
   private wallJumpCooldownFrames: number = 0; // prevents immediate double jump after wall jump
+
+  // Dash mechanics state
+  private dashing: boolean = false;
+  private dashDurationFrames: number = 0;
+  private dashCooldownFrames: number = 0;
+  private dashInvincibilityFrames: number = 0;
+
+  // Sprint mechanics state
+  private sprinting: boolean = false;
+  private stamina: number = MovementConstants.SPRINT_STAMINA_MAX;
+
+  // Player facing direction
+  private facingDirection: number = 1; // 1 for right, -1 for left
 
   constructor(x: number = 100, y: number = 100) {
     super();
@@ -73,6 +87,12 @@ export class PlayerEntity extends Entity {
   public applyMovement(direction: string, isPressed: boolean, isOnGround: boolean): void {
     const velocity = this.getComponent('velocity') as VelocityComponent;
     
+    // CRITICAL: Don't apply movement when dashing - dash controls velocity completely
+    if (this.dashing) {
+      console.log(`[PLAYER] Movement blocked - dashing for ${this.dashDurationFrames} more frames`);
+      return;
+    }
+    
     // Check for wall jump control lockout
     if (this.wallJumpControlLockout > 0) {
       // During lockout, only apply friction
@@ -88,14 +108,24 @@ export class PlayerEntity extends Entity {
     }
     
     // Determine acceleration based on ground state
-    const acceleration = isOnGround 
+    let acceleration = isOnGround 
       ? MovementConstants.ACCELERATION_GROUND 
       : MovementConstants.ACCELERATION_AIR * MovementConstants.AIR_CONTROL_FACTOR;
     
+    // Apply sprint multiplier if sprinting
+    if (this.sprinting) {
+      acceleration *= MovementConstants.SPRINT_ACCELERATION_MULTIPLIER;
+    }
+    
     // Determine max speed based on ground state
-    const maxSpeed = isOnGround 
+    let maxSpeed = isOnGround 
       ? MovementConstants.MAX_SPEED_GROUND 
       : MovementConstants.MAX_SPEED_AIR;
+    
+    // Apply sprint speed multiplier if sprinting
+    if (this.sprinting) {
+      maxSpeed *= MovementConstants.SPRINT_SPEED_MULTIPLIER;
+    }
     
     // Apply movement based on direction
     const accelPerFrame = acceleration * MovementConstants.FIXED_TIMESTEP;
@@ -105,12 +135,14 @@ export class PlayerEntity extends Entity {
       if (velocity.x < -maxSpeed) {
         velocity.x = -maxSpeed;
       }
+      this.facingDirection = -1; // Update facing direction
       console.log(`[PLAYER] Moving left, velocity.x: ${velocity.x.toFixed(2)}`);
     } else if (direction === 'right') {
       velocity.x += accelPerFrame;
       if (velocity.x > maxSpeed) {
         velocity.x = maxSpeed;
       }
+      this.facingDirection = 1; // Update facing direction
       console.log(`[PLAYER] Moving right, velocity.x: ${velocity.x.toFixed(2)}`);
     }
   }
@@ -141,9 +173,15 @@ export class PlayerEntity extends Entity {
       return;
     }
     
+    // CRITICAL: Don't apply gravity when dashing - dash controls velocity completely
+    if (this.dashing) {
+      console.log(`[PLAYER] Gravity skipped - dashing at ${this.getComponent<VelocityComponent>('velocity')?.y.toFixed(2)} px/s`);
+      return;
+    }
+    
     // Don't apply gravity when wall sliding - wall slide controls fall speed
     if (this.wallSliding) {
-      console.log(`[PLAYER] Gravity skipped - wall sliding at ${this.getComponent('velocity')?.y.toFixed(2)} px/s`);
+      console.log(`[PLAYER] Gravity skipped - wall sliding at ${this.getComponent<VelocityComponent>('velocity')?.y.toFixed(2)} px/s`);
       return;
     }
     
@@ -163,6 +201,7 @@ export class PlayerEntity extends Entity {
   public setGroundState(isGrounded: boolean): void {
     if (this.isGrounded !== isGrounded) {
       console.log(`[PLAYER] Ground state changed: ${this.isGrounded} -> ${isGrounded}`);
+      console.log(`[DEBUG] Double jump before ground state change: ${this.hasDoubleJump}`);
       this.isGrounded = isGrounded;
       
       // Reset jumping state and restore double jump when landing
@@ -237,6 +276,45 @@ export class PlayerEntity extends Entity {
       }
     }
     
+    // Update dash timers
+    if (this.dashDurationFrames > 0) {
+      this.dashDurationFrames--;
+      if (this.dashDurationFrames <= 0) {
+        this.dashing = false;
+        this.dashCooldownFrames = MovementConstants.DASH_COOLDOWN_FRAMES;
+        console.log('[PLAYER] Dash ended - cooldown started');
+      }
+    } else if (this.dashCooldownFrames > 0) {
+      // Only update cooldown if not currently dashing
+      this.dashCooldownFrames--;
+      if (this.dashCooldownFrames <= 0) {
+        console.log('[PLAYER] Dash cooldown expired - dash available');
+      }
+    }
+    
+    if (this.dashInvincibilityFrames > 0) {
+      this.dashInvincibilityFrames--;
+      if (this.dashInvincibilityFrames <= 0) {
+        console.log('[PLAYER] Dash invincibility expired');
+      }
+    }
+    
+    // Update sprint stamina
+    if (this.sprinting) {
+      this.stamina -= MovementConstants.SPRINT_STAMINA_DRAIN_RATE;
+      if (this.stamina <= 0) {
+        this.stamina = 0;
+        this.sprinting = false;
+        console.log('[PLAYER] Sprint ended - stamina depleted');
+      }
+    } else {
+      // Regenerate stamina when not sprinting
+      this.stamina += MovementConstants.SPRINT_STAMINA_REGEN_RATE;
+      if (this.stamina > MovementConstants.SPRINT_STAMINA_MAX) {
+        this.stamina = MovementConstants.SPRINT_STAMINA_MAX;
+      }
+    }
+    
   }
   
   // Wall mechanics methods
@@ -245,6 +323,11 @@ export class PlayerEntity extends Entity {
     const wasOnWall = this.touchingWallLeft || this.touchingWallRight;
     const wasLeftWall = this.touchingWallLeft;
     const wasRightWall = this.touchingWallRight;
+    
+    // Debug wall contact changes
+    if (leftWall !== this.touchingWallLeft || rightWall !== this.touchingWallRight) {
+      console.log(`[WALL_CONTACT] Wall contact changed - Left: ${this.touchingWallLeft}->${leftWall}, Right: ${this.touchingWallRight}->${rightWall}`);
+    }
     
     this.touchingWallLeft = leftWall;
     this.touchingWallRight = rightWall;
@@ -307,6 +390,7 @@ export class PlayerEntity extends Entity {
         if (this.hasDoubleJump) {
           this.hasDoubleJump = false;
           console.log('[PLAYER] Wall sliding consumed double jump');
+          console.trace('[DEBUG] Double jump set to false by wall sliding');
         }
       }
       
@@ -362,6 +446,9 @@ export class PlayerEntity extends Entity {
     velocity.x = jumpDirection * MovementConstants.WALL_JUMP_HORIZONTAL_VELOCITY;
     velocity.y = -MovementConstants.WALL_JUMP_VERTICAL_VELOCITY;
     
+    // Mark jump action as consumed
+    this.jumpActionConsumed = true;
+    
     // Set control lockout
     this.wallJumpControlLockout = MovementConstants.WALL_JUMP_CONTROL_LOCKOUT_FRAMES;
     
@@ -408,6 +495,7 @@ export class PlayerEntity extends Entity {
       this.isJumpingState = true;
       this.jumpHoldFrames = 1; // Start with 1 frame since we're pressing this frame
       this.coyoteTimeFrames = 0; // Use up coyote time
+      this.jumpActionConsumed = true; // Mark jump action as consumed
       
       // Start with minimum jump velocity, will be increased by updateJump if holding
       this.executeJump(MovementConstants.MIN_JUMP_VELOCITY);
@@ -453,8 +541,10 @@ export class PlayerEntity extends Entity {
   public startDoubleJump(): boolean {
     if (!this.isGrounded && this.hasDoubleJump && this.wallJumpCooldownFrames <= 0) {
       this.hasDoubleJump = false;
-      this.executeJump(MovementConstants.DOUBLE_JUMP_VELOCITY);
+      this.jumpActionConsumed = true; // Mark jump action as consumed
       console.log('[PLAYER] Double jump executed');
+      console.trace('[DEBUG] Double jump set to false by double jump execution');
+      this.executeJump(MovementConstants.DOUBLE_JUMP_VELOCITY);
       return true;
     }
     
@@ -505,7 +595,7 @@ export class PlayerEntity extends Entity {
   private executeJump(jumpVelocity: number): void {
     const velocity = this.getComponent('velocity') as VelocityComponent;
     velocity.y = -jumpVelocity; // Negative = upward
-    this.isGrounded = false;
+    // Note: Ground state is managed by collision system, not jump system
     console.log(`[PLAYER] Jump executed with velocity: ${velocity.y}`);
   }
   
@@ -521,6 +611,108 @@ export class PlayerEntity extends Entity {
   
   public hasDoubleJumpAvailable(): boolean {
     return this.hasDoubleJump;
+  }
+  
+  public hasJumpActionBeenConsumed(): boolean {
+    return this.jumpActionConsumed;
+  }
+  
+  public setJumpActionConsumed(): void {
+    this.jumpActionConsumed = true;
+  }
+  
+  public resetJumpActionOnKeyRelease(): void {
+    this.jumpActionConsumed = false;
+  }
+
+  // Dash System Methods
+  
+  public canDash(): boolean {
+    return this.dashCooldownFrames <= 0 && !this.dashing;
+  }
+  
+  public executeDash(downward: boolean = false): boolean {
+    if (!this.canDash()) {
+      console.log(`[DASH] Cannot dash - cooldown: ${this.dashCooldownFrames} frames`);
+      return false;
+    }
+    
+    const velocity = this.getComponent('velocity') as VelocityComponent;
+    
+    // Dash in facing direction (Hollow Knight style)
+    let velX = 0;
+    let velY = 0;
+    
+    if (downward) {
+      // Downward dash (like Dashmaster charm)
+      velY = MovementConstants.DASH_VELOCITY;
+      console.log('[PLAYER] Dash executed - direction: down');
+    } else {
+      // Horizontal dash in facing direction
+      velX = this.facingDirection * MovementConstants.DASH_VELOCITY;
+      const direction = this.facingDirection > 0 ? 'right' : 'left';
+      console.log(`[PLAYER] Dash executed - direction: ${direction} (facing)`);
+    }
+    
+    // Set dash state
+    this.dashing = true;
+    this.dashDurationFrames = MovementConstants.DASH_DURATION_FRAMES;
+    this.dashInvincibilityFrames = MovementConstants.DASH_INVINCIBILITY_FRAMES;
+    
+    // CRITICAL: Clear all existing velocity before applying dash velocity
+    // This ensures dash is always consistent regardless of current movement
+    velocity.x = velX;
+    velocity.y = velY;
+    
+    console.log(`[PLAYER] Dash velocity: (${velX.toFixed(1)}, ${velY.toFixed(1)})`);
+    return true;
+  }
+  
+  public isDashing(): boolean {
+    return this.dashing;
+  }
+  
+  public isInvincible(): boolean {
+    return this.dashInvincibilityFrames > 0;
+  }
+
+  // Sprint System Methods
+  
+  public canSprint(): boolean {
+    return this.stamina >= MovementConstants.SPRINT_MIN_STAMINA;
+  }
+  
+  public startSprint(): void {
+    if (this.canSprint()) {
+      if (!this.sprinting) {
+        this.sprinting = true;
+        console.log('[PLAYER] Sprint started');
+      }
+    } else if (!this.canSprint()) {
+      console.log(`[PLAYER] Cannot sprint - stamina too low: ${this.stamina}/${MovementConstants.SPRINT_MIN_STAMINA}`);
+    }
+  }
+  
+  public stopSprint(): void {
+    if (this.sprinting) {
+      this.sprinting = false;
+      console.log('[PLAYER] Sprint stopped');
+    }
+  }
+  
+  public isSprinting(): boolean {
+    return this.sprinting;
+  }
+  
+  public drainStamina(amount: number): void {
+    this.stamina -= amount;
+    if (this.stamina < 0) {
+      this.stamina = 0;
+    }
+  }
+  
+  public getStamina(): number {
+    return this.stamina;
   }
 
   public getDebugInfo(): Record<string, any> {
@@ -547,6 +739,19 @@ export class PlayerEntity extends Entity {
         coyoteTime: this.wallCoyoteTimeFrames,
         recentContact: this.recentWallContactFrames,
         jumpCooldown: this.wallJumpCooldownFrames
+      },
+      dash: {
+        dashing: this.dashing,
+        duration: this.dashDurationFrames,
+        cooldown: this.dashCooldownFrames,
+        invincible: this.dashInvincibilityFrames > 0,
+        invincibilityFrames: this.dashInvincibilityFrames
+      },
+      sprint: {
+        sprinting: this.sprinting,
+        stamina: this.stamina,
+        maxStamina: MovementConstants.SPRINT_STAMINA_MAX,
+        canSprint: this.canSprint()
       }
     };
   }
