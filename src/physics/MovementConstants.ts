@@ -42,6 +42,15 @@ export class MovementConstants {
   // Movement Thresholds
   public static readonly MIN_MOVEMENT_THRESHOLD = 0.1; // minimum velocity to consider "moving"
   public static readonly STOP_THRESHOLD = 0.5; // velocity below this stops the player
+  
+  // Wall Mechanics
+  public static readonly WALL_SLIDE_SPEED = 60; // pixels/second (slow slide down walls)
+  public static readonly WALL_SLIDE_ACCELERATION = 240; // pixels/second² (how fast we reach slide speed)
+  public static readonly WALL_JUMP_HORIZONTAL_VELOCITY = 250; // pixels/second (push away from wall)
+  public static readonly WALL_JUMP_VERTICAL_VELOCITY = 400; // pixels/second (upward velocity)
+  public static readonly WALL_JUMP_CONTROL_LOCKOUT_FRAMES = 4; // frames where horizontal input is ignored after wall jump
+  public static readonly WALL_DETECTION_OFFSET = 2; // pixels to check for wall proximity
+  public static readonly WALL_COYOTE_TIME_FRAMES = 6; // frames of grace period after leaving wall
 }
 
 console.log('[PHYSICS] MovementConstants loaded:', {

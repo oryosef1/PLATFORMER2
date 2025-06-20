@@ -22,6 +22,16 @@ export class PlayerEntity extends Entity {
   private coyoteTimeFrames: number = 0;
   private jumpBufferFrames: number = 0;
   private hasDoubleJump: boolean = true;
+  
+  // Wall mechanics state
+  private touchingWallLeft: boolean = false;
+  private touchingWallRight: boolean = false;
+  private wallSliding: boolean = false;
+  private wallJumpControlLockout: number = 0;
+  private lastWallJumpDirection: number = 0; // -1 for left, 1 for right
+  private wallCoyoteTimeFrames: number = 0; // grace period after leaving wall
+  private recentWallContactFrames: number = 0; // tracks recent wall contact to prevent vertical jumps
+  private wallJumpCooldownFrames: number = 0; // prevents immediate double jump after wall jump
 
   constructor(x: number = 100, y: number = 100) {
     super();
@@ -62,6 +72,14 @@ export class PlayerEntity extends Entity {
 
   public applyMovement(direction: string, isPressed: boolean, isOnGround: boolean): void {
     const velocity = this.getComponent('velocity') as VelocityComponent;
+    
+    // Check for wall jump control lockout
+    if (this.wallJumpControlLockout > 0) {
+      // During lockout, only apply friction
+      this.applyFriction(isOnGround);
+      console.log(`[PLAYER] Movement locked out for ${this.wallJumpControlLockout} more frames`);
+      return;
+    }
     
     if (!isPressed || direction === 'none') {
       // Apply friction when no input
@@ -120,6 +138,12 @@ export class PlayerEntity extends Entity {
   public applyGravity(): void {
     if (this.isGrounded) {
       // Don't apply gravity when on ground
+      return;
+    }
+    
+    // Don't apply gravity when wall sliding - wall slide controls fall speed
+    if (this.wallSliding) {
+      console.log(`[PLAYER] Gravity skipped - wall sliding at ${this.getComponent('velocity')?.y.toFixed(2)} px/s`);
       return;
     }
     
@@ -183,6 +207,197 @@ export class PlayerEntity extends Entity {
   public update(deltaTime: number): void {
     // Update visual position (collision system handles position updates)
     this.updateVisualPosition();
+    
+    // Update wall jump control lockout
+    if (this.wallJumpControlLockout > 0) {
+      this.wallJumpControlLockout--;
+    }
+    
+    // Update wall coyote time
+    if (this.wallCoyoteTimeFrames > 0) {
+      this.wallCoyoteTimeFrames--;
+      if (this.wallCoyoteTimeFrames <= 0) {
+        console.log('[PLAYER] Wall coyote time expired');
+      }
+    }
+    
+    // Update recent wall contact timer
+    if (this.recentWallContactFrames > 0) {
+      this.recentWallContactFrames--;
+      if (this.recentWallContactFrames <= 0) {
+        console.log('[PLAYER] Recent wall contact expired - vertical jumps allowed again');
+      }
+    }
+    
+    // Update wall jump cooldown timer
+    if (this.wallJumpCooldownFrames > 0) {
+      this.wallJumpCooldownFrames--;
+      if (this.wallJumpCooldownFrames <= 0) {
+        console.log('[PLAYER] Wall jump cooldown expired - double jump available');
+      }
+    }
+    
+  }
+  
+  // Wall mechanics methods
+  
+  public setWallContact(leftWall: boolean, rightWall: boolean): void {
+    const wasOnWall = this.touchingWallLeft || this.touchingWallRight;
+    const wasLeftWall = this.touchingWallLeft;
+    const wasRightWall = this.touchingWallRight;
+    
+    this.touchingWallLeft = leftWall;
+    this.touchingWallRight = rightWall;
+    
+    const isOnWall = leftWall || rightWall;
+    
+    // Track recent wall contact to prevent vertical jumps when rapidly moving between walls
+    if (isOnWall) {
+      this.recentWallContactFrames = 6; // 6 frames (0.1 seconds) of recent wall contact - shorter duration
+    }
+    
+    if (wasOnWall !== isOnWall || wasLeftWall !== leftWall || wasRightWall !== rightWall) {
+      console.log(`[PLAYER] Wall contact changed - Left: ${wasLeftWall}->${leftWall}, Right: ${wasRightWall}->${rightWall}`);
+      
+      if (!isOnWall && wasOnWall) {
+        // Start wall coyote time when leaving wall
+        this.wallCoyoteTimeFrames = MovementConstants.WALL_COYOTE_TIME_FRAMES;
+        // Remember which wall we just left for coyote time
+        this.lastWallJumpDirection = wasLeftWall ? 1 : -1;
+        console.log(`[PLAYER] Started wall coyote time - direction: ${this.lastWallJumpDirection}`);
+      } else if (isOnWall && !wasOnWall) {
+        // Reset wall coyote time when touching wall
+        this.wallCoyoteTimeFrames = 0;
+        // CRITICAL: Wall contact does NOT restore double jump - only landing on ground or wall jumping does
+        console.log('[PLAYER] Wall contact - double jump NOT restored');
+      }
+    }
+  }
+  
+  public updateWallSlide(isPressingLeft: boolean, isPressingRight: boolean): void {
+    const velocity = this.getComponent('velocity') as VelocityComponent;
+    
+    // Check if we should be wall sliding
+    // Must be pressing towards the wall to slide
+    const isPressingTowardsWall = (this.touchingWallLeft && isPressingLeft) || 
+                                  (this.touchingWallRight && isPressingRight);
+    
+    const canWallSlide = !this.isGrounded && 
+                         (this.touchingWallLeft || this.touchingWallRight) && 
+                         velocity.y > 0.1 && // Only slide when falling (small threshold to avoid micro-movements)
+                         isPressingTowardsWall; // Must press towards wall
+    
+    // Debug wall slide activation when state changes
+    if (canWallSlide && !this.wallSliding) {
+      console.log(`[WALL_DEBUG] Wall slide conditions met - velocity.y: ${velocity.y.toFixed(2)}, target: ${MovementConstants.WALL_SLIDE_SPEED}`);
+    }
+    
+    // Additional debug when touching wall but not sliding
+    if ((this.touchingWallLeft || this.touchingWallRight) && !this.wallSliding && !this.isGrounded && velocity.y > 0.1) {
+      console.log(`[WALL_DEBUG] Touching wall but not sliding - pressing towards wall: ${isPressingTowardsWall}, velocity.y: ${velocity.y.toFixed(2)}`);
+    }
+    
+    if (canWallSlide) {
+      if (!this.wallSliding) {
+        console.log('[PLAYER] Started wall sliding');
+        this.wallSliding = true;
+        
+        
+        // Wall sliding consumes double jump to prevent air mobility abuse
+        if (this.hasDoubleJump) {
+          this.hasDoubleJump = false;
+          console.log('[PLAYER] Wall sliding consumed double jump');
+        }
+      }
+      
+      // ALWAYS maintain consistent wall slide speed - regardless of current velocity
+      velocity.y = MovementConstants.WALL_SLIDE_SPEED;
+      console.log(`[PLAYER] Wall sliding - velocity set to consistent ${MovementConstants.WALL_SLIDE_SPEED} px/s`);
+    } else {
+      if (this.wallSliding) {
+        console.log('[PLAYER] Stopped wall sliding');
+        this.wallSliding = false;
+      }
+    }
+  }
+  
+  public canWallJump(): boolean {
+    const hasWallContact = this.touchingWallLeft || this.touchingWallRight;
+    const hasWallCoyoteTime = this.wallCoyoteTimeFrames > 0;
+    const noCooldown = this.wallJumpCooldownFrames <= 0;
+    
+    return !this.isGrounded && (hasWallContact || hasWallCoyoteTime) && noCooldown;
+  }
+  
+  public executeWallJump(): boolean {
+    if (!this.canWallJump()) {
+      console.log(`[WALL_JUMP] Cannot wall jump - grounded: ${this.isGrounded}, wallContact: ${this.touchingWallLeft || this.touchingWallRight}, coyoteTime: ${this.wallCoyoteTimeFrames}, cooldown: ${this.wallJumpCooldownFrames}`);
+      return false;
+    }
+    
+    const velocity = this.getComponent('velocity') as VelocityComponent;
+    
+    // Determine jump direction (away from wall)
+    let jumpDirection: number;
+    if (this.touchingWallLeft || this.touchingWallRight) {
+      // Currently touching wall - prioritize current wall contact
+      if (this.touchingWallLeft && this.touchingWallRight) {
+        // Corner case: touching both walls, use velocity to determine which wall to jump from
+        jumpDirection = velocity.x >= 0 ? -1 : 1; // Jump away from the direction we're moving
+        console.log(`[PLAYER] Both walls detected, using velocity direction: ${jumpDirection}`);
+      } else {
+        jumpDirection = this.touchingWallLeft ? 1 : -1; // Jump right if on left wall
+      }
+      this.lastWallJumpDirection = jumpDirection; // Remember for coyote time
+      console.log(`[PLAYER] Wall jump from current wall contact - direction: ${jumpDirection}`);
+    } else if (this.wallCoyoteTimeFrames > 0) {
+      // Using coyote time - use last known wall direction
+      jumpDirection = this.lastWallJumpDirection;
+      console.log(`[PLAYER] Wall jump using coyote time - direction: ${jumpDirection}`);
+    } else {
+      return false; // Should not happen due to canWallJump check
+    }
+    
+    // Set velocities
+    velocity.x = jumpDirection * MovementConstants.WALL_JUMP_HORIZONTAL_VELOCITY;
+    velocity.y = -MovementConstants.WALL_JUMP_VERTICAL_VELOCITY;
+    
+    // Set control lockout
+    this.wallJumpControlLockout = MovementConstants.WALL_JUMP_CONTROL_LOCKOUT_FRAMES;
+    
+    // Set cooldown to prevent immediate double jump after wall jump
+    this.wallJumpCooldownFrames = 8; // 8 frames (about 0.13 seconds) cooldown
+    
+    
+    // Reset wall sliding state and coyote time
+    this.wallSliding = false;
+    this.wallCoyoteTimeFrames = 0; // Use up coyote time
+    
+    // Wall jumps should NEVER restore double jump - only landing on ground should
+    console.log('[PLAYER] Wall jump executed - double jump stays as is (only ground restores it)');
+    
+    console.log(`[PLAYER] Wall jump executed - direction: ${jumpDirection}, velocity: (${velocity.x}, ${velocity.y})`);
+    return true;
+  }
+  
+  public isWallSliding(): boolean {
+    return this.wallSliding;
+  }
+  
+  public isTouchingWall(): boolean {
+    return this.touchingWallLeft || this.touchingWallRight;
+  }
+  
+  public hasRecentWallContact(): boolean {
+    return this.recentWallContactFrames > 0;
+  }
+  
+  public hasWallJumpControlLockout(): boolean {
+    return this.wallJumpControlLockout > 0;
+  }
+  
+  public getWallJumpCooldownFrames(): number {
+    return this.wallJumpCooldownFrames;
   }
 
   // Jumping System Methods
@@ -236,12 +451,17 @@ export class PlayerEntity extends Entity {
   }
   
   public startDoubleJump(): boolean {
-    if (!this.isGrounded && this.hasDoubleJump) {
+    if (!this.isGrounded && this.hasDoubleJump && this.wallJumpCooldownFrames <= 0) {
       this.hasDoubleJump = false;
       this.executeJump(MovementConstants.DOUBLE_JUMP_VELOCITY);
       console.log('[PLAYER] Double jump executed');
       return true;
     }
+    
+    if (this.wallJumpCooldownFrames > 0) {
+      console.log(`[PLAYER] Double jump blocked - wall jump cooldown: ${this.wallJumpCooldownFrames} frames`);
+    }
+    
     return false;
   }
   
@@ -318,6 +538,15 @@ export class PlayerEntity extends Entity {
         coyoteTime: this.coyoteTimeFrames,
         jumpBuffer: this.jumpBufferFrames,
         doubleJump: this.hasDoubleJump
+      },
+      wall: {
+        touchingLeft: this.touchingWallLeft,
+        touchingRight: this.touchingWallRight,
+        sliding: this.wallSliding,
+        jumpLockout: this.wallJumpControlLockout,
+        coyoteTime: this.wallCoyoteTimeFrames,
+        recentContact: this.recentWallContactFrames,
+        jumpCooldown: this.wallJumpCooldownFrames
       }
     };
   }

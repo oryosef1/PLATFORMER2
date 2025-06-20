@@ -148,18 +148,30 @@
 - [x] User testing completed and confirmed working
 
 #### 2.4 Advanced Movement
-**Status**: 📋 Pending
+**Status**: ✅ COMPLETED with comprehensive tests and critical fixes
 
-**Tests to Write First**:
-- [ ] Test wall slide speed (60-80 px/s)
-- [ ] Test wall jump mechanics
-- [ ] Test dash distance and speed
-- [ ] Test dash cooldown timing
-- [ ] Test invincibility during dash
+**Tests Completed**:
+- [x] Test wall detection (left, right, both walls) - 4 tests
+- [x] Test wall slide speed and mechanics - 8 tests
+- [x] Test wall jump mechanics and directions - 6 tests
+- [x] Test wall jump control lockout system - 3 tests
+- [x] Test wall mechanics integration - 3 tests
+- [x] Test wall jump cooldown prevention - 6 tests
+- [x] All 30 wall mechanics tests passing (172 tests total)
 
 **Sub-tasks**:
-- [ ] Implement wall sliding mechanics
-- [ ] Add wall jumping system
+- [x] Implement wall detection system (left/right wall contact)
+- [x] Add wall sliding mechanics (60 px/s consistent fall speed)
+- [x] Create wall jumping system with proper velocity directions
+- [x] Add wall jump coyote time (6-frame grace period)
+- [x] Implement wall jump control lockout (4 frames)
+- [x] Add wall jump cooldown system (8 frames)
+- [x] **CRITICAL FIX**: Wall jumps NEVER restore double jump
+- [x] Fix gravity conflicts with wall sliding
+- [x] Eliminate wall jump spam exploits
+- [x] User testing completed and confirmed working
+
+**Dash mechanics moved to future phase**:
 - [ ] Create dash mechanic
 - [ ] Add dash cooldown system
 - [ ] Implement sprint functionality
@@ -355,7 +367,7 @@
 - **Performance Tests**: Ensure 60fps with 100+ entities
 
 ## Current Priority
-Focus on Phase 2.4: Advanced Movement (wall sliding, wall jumping, dash mechanics)
+Focus on Phase 3.1: Combat System Foundation (hitbox/hurtbox system, melee attacks)
 
 ## Completed Phases
 - ✅ Phase 1.1: Basic Game Setup
@@ -365,3 +377,4 @@ Focus on Phase 2.4: Advanced Movement (wall sliding, wall jumping, dash mechanic
 - ✅ Phase 2.1: Player Entity & Basic Movement (89 tests passing total)
 - ✅ Phase 2.2: Enhanced Jumping System (108 tests passing total)
 - ✅ Phase 2.3: Collision System with Critical Architecture Fixes (142 tests passing total)
+- ✅ Phase 2.4: Advanced Movement - Wall Mechanics (172 tests passing total)

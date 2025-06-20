@@ -35,37 +35,39 @@ export class GameScene extends Phaser.Scene {
     console.log('[GAME] DebugCollision initialized');
     
     // Create platform entities with ECS
-    // Ground platform
-    const groundEntity = new PlatformEntity(512, 700, 1024, 100);
+    // Ground platform (longer for easier testing)
+    const groundEntity = new PlatformEntity(400, 700, 800, 32);
     this.platformEntities.push(groundEntity);
     this.collisionSystem.addEntity(groundEntity);
     
     // Create visual for ground
-    const groundVisual = this.add.rectangle(512, 700, 1024, 100, 0x27ae60);
+    const groundVisual = this.add.rectangle(400, 700, 800, 32, 0x27ae60);
     groundVisual.setDepth(0);
     this.platformVisuals.push(groundVisual);
     
-    // Floating platforms
-    const platform1Entity = new PlatformEntity(400, 500, 200, 32);
-    this.platformEntities.push(platform1Entity);
-    this.collisionSystem.addEntity(platform1Entity);
+    // Two walls close together for wall jump testing
+    // Left wall
+    const testWallLeftEntity = new PlatformEntity(300, 200, 32, 600);
+    this.platformEntities.push(testWallLeftEntity);
+    this.collisionSystem.addEntity(testWallLeftEntity);
     
-    const platform1Visual = this.add.rectangle(400, 500, 200, 32, 0x27ae60);
-    platform1Visual.setDepth(0);
-    this.platformVisuals.push(platform1Visual);
+    const testWallLeftVisual = this.add.rectangle(300, 200, 32, 600, 0x9b59b6);
+    testWallLeftVisual.setDepth(0);
+    this.platformVisuals.push(testWallLeftVisual);
     
-    const platform2Entity = new PlatformEntity(700, 350, 200, 32);
-    this.platformEntities.push(platform2Entity);
-    this.collisionSystem.addEntity(platform2Entity);
+    // Right wall (close to left one for wall-to-wall jumping)
+    const testWallRightEntity = new PlatformEntity(400, 200, 32, 600);
+    this.platformEntities.push(testWallRightEntity);
+    this.collisionSystem.addEntity(testWallRightEntity);
     
-    const platform2Visual = this.add.rectangle(700, 350, 200, 32, 0x27ae60);
-    platform2Visual.setDepth(0);
-    this.platformVisuals.push(platform2Visual);
+    const testWallRightVisual = this.add.rectangle(400, 200, 32, 600, 0x9b59b6);
+    testWallRightVisual.setDepth(0);
+    this.platformVisuals.push(testWallRightVisual);
     
     // Create ECS-based player entity - position to be on ground
-    // Ground is at Y=700 with height 100, so top of ground is at Y=650
-    // Player height is 48, so player center should be at Y=650-24=626
-    this.playerEntity = new PlayerEntity(100, 626); // Start on ground platform
+    // Ground is at Y=700 with height 32, so top of ground is at Y=684
+    // Player height is 48, so player center should be at Y=684-24=660
+    this.playerEntity = new PlayerEntity(200, 660); // Start on ground platform
     this.collisionSystem.addEntity(this.playerEntity);
     console.log('[GAME] PlayerEntity created at ground level and added to collision system');
     
@@ -94,8 +96,9 @@ export class GameScene extends Phaser.Scene {
     this.add.text(10, 70, 'Arrow Keys to move', { fontSize: '14px', color: '#ffffff' });
     this.add.text(10, 90, 'UP to jump (hold for higher)', { fontSize: '14px', color: '#ffffff' });
     this.add.text(10, 110, 'UP twice for double jump', { fontSize: '14px', color: '#ffffff' });
-    this.add.text(10, 130, 'C - Toggle collision debug', { fontSize: '12px', color: '#ffff00' });
-    this.add.text(10, 150, 'Check console for collision debugging', { fontSize: '12px', color: '#ffff00' });
+    this.add.text(10, 130, 'UP while on wall for wall jump', { fontSize: '14px', color: '#ffffff' });
+    this.add.text(10, 150, 'C - Toggle collision debug', { fontSize: '12px', color: '#ffff00' });
+    this.add.text(10, 170, 'Check console for debugging', { fontSize: '12px', color: '#ffff00' });
     
     // Add debug controls
     this.input.keyboard!.on('keydown-C', () => {
@@ -105,16 +108,16 @@ export class GameScene extends Phaser.Scene {
     });
     
     // Player position debug
-    this.add.text(10, 160, 'Player Position:', { fontSize: '16px', color: '#ffffff' });
-    const posText = this.add.text(10, 180, '', { fontSize: '14px', color: '#ffffff' });
+    this.add.text(10, 190, 'Player Position:', { fontSize: '16px', color: '#ffffff' });
+    const posText = this.add.text(10, 210, '', { fontSize: '14px', color: '#ffffff' });
     
     // Input debug display
-    this.add.text(10, 210, 'Input Debug:', { fontSize: '16px', color: '#ffffff' });
-    this.inputDebugText = this.add.text(10, 230, '', { fontSize: '12px', color: '#00ff00' });
+    this.add.text(10, 240, 'Input Debug:', { fontSize: '16px', color: '#ffffff' });
+    this.inputDebugText = this.add.text(10, 260, '', { fontSize: '12px', color: '#00ff00' });
     
     // Player ECS debug display
-    this.add.text(10, 280, 'Player ECS Debug:', { fontSize: '16px', color: '#ffffff' });
-    this.playerDebugText = this.add.text(10, 300, '', { fontSize: '12px', color: '#00ffff' });
+    this.add.text(10, 310, 'Player ECS Debug:', { fontSize: '16px', color: '#ffffff' });
+    this.playerDebugText = this.add.text(10, 330, '', { fontSize: '12px', color: '#00ffff' });
     
     // Update debug info every frame
     this.events.on('update', () => {
@@ -134,7 +137,10 @@ export class GameScene extends Phaser.Scene {
         `Grounded: ${playerDebug.isGrounded} | Speed: ${playerDebug.speed}\n` +
         `Jump: ${playerDebug.jumping.isJumping} | Hold: ${playerDebug.jumping.holdFrames}\n` +
         `Coyote: ${playerDebug.jumping.coyoteTime} | Buffer: ${playerDebug.jumping.jumpBuffer}\n` +
-        `Double: ${playerDebug.jumping.doubleJump}`
+        `Double: ${playerDebug.jumping.doubleJump}\n` +
+        `Wall L: ${playerDebug.wall.touchingLeft} | R: ${playerDebug.wall.touchingRight} | Slide: ${playerDebug.wall.sliding}\n` +
+        `Wall Jump Lock: ${playerDebug.wall.jumpLockout} | Wall Coyote: ${playerDebug.wall.coyoteTime}\n` +
+        `Wall Recent: ${playerDebug.wall.recentContact} | Jump Cooldown: ${playerDebug.wall.jumpCooldown}`
       );
     });
   }
@@ -169,25 +175,50 @@ export class GameScene extends Phaser.Scene {
     // Apply gravity
     this.playerEntity.applyGravity();
     
-    // Enhanced jumping system (Phase 2.2) - using captured values
+    // Update wall sliding (must be done after gravity)
+    this.playerEntity.updateWallSlide(leftPressed, rightPressed);
+    
+    // Enhanced jumping system (Phase 2.2 + 2.4) - using captured values
     
     // Handle jump start
     if (wasUpPressed) {
       const isOnGround = this.playerEntity.isOnGround();
-      console.log(`[MOVEMENT] UP pressed - player isOnGround: ${isOnGround}`);
+      const canWallJump = this.playerEntity.canWallJump();
+      const isTouchingWall = this.playerEntity.isTouchingWall();
+      const hasRecentWallContact = this.playerEntity.hasRecentWallContact();
       
-      // Try regular jump first
-      if (!this.playerEntity.startJump()) {
-        // If regular jump failed, try double jump
-        if (!this.playerEntity.startDoubleJump()) {
-          // If both failed, buffer the jump
-          this.playerEntity.bufferJump();
-          console.log('[MOVEMENT] Jump buffered - player not on ground');
+      const hasDoubleJump = this.playerEntity.hasDoubleJumpAvailable();
+      const wallJumpCooldown = this.playerEntity.getWallJumpCooldownFrames();
+      
+      console.log(`[MOVEMENT] UP pressed - isOnGround: ${isOnGround}, canWallJump: ${canWallJump}, touchingWall: ${isTouchingWall}, recentWall: ${hasRecentWallContact}, doubleJump: ${hasDoubleJump}, cooldown: ${wallJumpCooldown}`);
+      
+      // PRIORITY 1: Wall jump if touching wall or have wall coyote time
+      if (canWallJump) {
+        if (this.playerEntity.executeWallJump()) {
+          console.log('[MOVEMENT] Wall jump executed');
         } else {
-          console.log('[MOVEMENT] Double jump executed');
+          console.log('[MOVEMENT] Wall jump failed - buffering instead of fallback');
+          this.playerEntity.bufferJump();
         }
-      } else {
-        console.log('[MOVEMENT] Jump started successfully');
+      }
+      // PRIORITY 2: Ground jump ONLY if on ground AND no recent wall contact
+      else if (isOnGround && !hasRecentWallContact && this.playerEntity.startJump()) {
+        console.log('[MOVEMENT] Ground jump started');
+      }
+      // PRIORITY 3: Double jump if not touching walls AND no wall jump cooldown (prevent double jump spam after wall jumps)
+      else if (!isTouchingWall && wallJumpCooldown <= 0 && this.playerEntity.startDoubleJump()) {
+        console.log('[MOVEMENT] Double jump executed');
+      }
+      // PRIORITY 4: Buffer jump if none of the above worked
+      else {
+        this.playerEntity.bufferJump();
+        if (hasRecentWallContact) {
+          console.log('[MOVEMENT] Jump buffered - recent wall contact prevents vertical jumps');
+        } else if (wallJumpCooldown > 0) {
+          console.log(`[MOVEMENT] Jump buffered - wall jump cooldown prevents double jump (${wallJumpCooldown} frames)`);
+        } else {
+          console.log('[MOVEMENT] Jump buffered - no jump options available');
+        }
       }
     }
     
@@ -221,19 +252,25 @@ export class GameScene extends Phaser.Scene {
     const collisions = this.collisionSystem.update(deltaSeconds);
     
     // Step 3: Process and resolve collisions
+    let touchingWallLeft = false;
+    let touchingWallRight = false;
+    
     for (const collision of collisions) {
       if (collision.entityA === this.playerEntity || collision.entityB === this.playerEntity) {
         const platform = collision.entityA === this.playerEntity ? collision.entityB : collision.entityA;
         
-        console.log(`[COLLISION] Player collision detected:`);
-        console.log(`[COLLISION] Normal: ${collision.collisionInfo.normalX}, ${collision.collisionInfo.normalY}`);
-        console.log(`[COLLISION] Overlap: ${collision.collisionInfo.overlapX.toFixed(1)}, ${collision.collisionInfo.overlapY.toFixed(1)}`);
-        console.log(`[COLLISION] Player velocity: ${velocity.x.toFixed(1)}, ${velocity.y.toFixed(1)}`);
+        // console.log(`[COLLISION] Player collision detected:`);
+        // console.log(`[COLLISION] Normal: ${collision.collisionInfo.normalX}, ${collision.collisionInfo.normalY}`);
+        // console.log(`[COLLISION] Overlap: ${collision.collisionInfo.overlapX.toFixed(1)}, ${collision.collisionInfo.overlapY.toFixed(1)}`);
+        // console.log(`[COLLISION] Player velocity: ${velocity.x.toFixed(1)}, ${velocity.y.toFixed(1)}`);
+        // console.log(`[COLLISION] Platform position: ${platform.getComponent('position')?.x}, ${platform.getComponent('position')?.y}`);
         
-        // Simple, robust collision resolution
+        // Simple, robust collision resolution with stability improvements
         if (collision.collisionInfo.normalY === -1 && velocity.y >= 0) {
           // Landing on top of platform (falling down)
-          position.y -= collision.collisionInfo.overlapY;
+          // Add small tolerance to prevent oscillation
+          const correctionY = collision.collisionInfo.overlapY + 0.1;
+          position.y -= correctionY;
           velocity.y = 0;
           if (!this.playerEntity.isOnGround()) {
             console.log('[COLLISION] Player landed on platform');
@@ -241,31 +278,70 @@ export class GameScene extends Phaser.Scene {
           }
         } else if (collision.collisionInfo.normalY === 1 && velocity.y <= 0) {
           // Hitting ceiling (jumping up)
-          position.y += collision.collisionInfo.overlapY;
+          const correctionY = collision.collisionInfo.overlapY + 0.1;
+          position.y += correctionY;
           velocity.y = 0;
           console.log('[COLLISION] Player hit ceiling');
         } else if (collision.collisionInfo.normalX !== 0) {
-          // Side collision
+          // Side collision - wall detected
           if (collision.collisionInfo.normalX === -1) {
-            position.x -= collision.collisionInfo.overlapX;
+            // Hitting wall on the right (normal points left)
+            const correctionX = collision.collisionInfo.overlapX + 0.1;
+            position.x -= correctionX;
+            touchingWallRight = true;
+            console.log('[COLLISION] Player hit RIGHT wall');
           } else {
-            position.x += collision.collisionInfo.overlapX;
+            // Hitting wall on the left (normal points right)
+            const correctionX = collision.collisionInfo.overlapX + 0.1;
+            position.x += correctionX;
+            touchingWallLeft = true;
+            console.log('[COLLISION] Player hit LEFT wall');
           }
           velocity.x = 0;
-          console.log('[COLLISION] Player hit wall');
+          console.log(`[COLLISION] Wall contact - Left: ${touchingWallLeft}, Right: ${touchingWallRight}`);
         }
       }
     }
     
+    // Update wall contact state
+    this.playerEntity.setWallContact(touchingWallLeft, touchingWallRight);
+    
     // Check if player left ground (no longer colliding with any platform from below)
+    // Add tolerance to prevent oscillation
+    const groundTolerance = 2.0; // pixels
     const isStillOnGround = collisions.some(collision => {
       const isPlayerCollision = collision.entityA === this.playerEntity || collision.entityB === this.playerEntity;
-      return isPlayerCollision && collision.collisionInfo.normalY === -1 && velocity.y >= 0;
+      const isGroundCollision = collision.collisionInfo.normalY === -1 && velocity.y >= -groundTolerance;
+      return isPlayerCollision && isGroundCollision;
     });
     
+    // Only change ground state if player is clearly off ground (prevent oscillation)
     if (this.playerEntity.isOnGround() && !isStillOnGround) {
-      console.log('[COLLISION] Player left ground - no platform collision');
-      this.playerEntity.setGroundState(false);
+      // Double-check with position-based ground detection for stability
+      const playerPos = this.playerEntity.getComponent('position') as PositionComponent;
+      let nearGround = false;
+      
+      for (const platformEntity of this.platformEntities) {
+        const platformPos = platformEntity.getComponent('position') as PositionComponent;
+        const platformCollision = platformEntity.getComponent('collision') as CollisionComponent;
+        const platformAABB = platformCollision.getAABB(platformPos.x, platformPos.y);
+        
+        // Check if player is near the top of any platform
+        const playerBottom = playerPos.y + 24; // Half height
+        const platformTop = platformAABB.y;
+        
+        if (Math.abs(playerBottom - platformTop) <= groundTolerance &&
+            playerPos.x + 16 > platformAABB.x && 
+            playerPos.x - 16 < platformAABB.x + platformAABB.width) {
+          nearGround = true;
+          break;
+        }
+      }
+      
+      if (!nearGround) {
+        console.log('[COLLISION] Player left ground - confirmed by position check');
+        this.playerEntity.setGroundState(false);
+      }
     }
     
     // Update player entity visual position only (movement already applied above)

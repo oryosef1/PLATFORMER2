@@ -113,16 +113,41 @@ export class CollisionSystem {
     const overlapX = Math.min(a.x + a.width - b.x, b.x + b.width - a.x);
     const overlapY = Math.min(a.y + a.height - b.y, b.y + b.height - a.y);
 
-    // Determine collision normal based on minimum overlap (simple and reliable)
+    // Determine collision normal based on minimum overlap with better threshold
     let normalX = 0;
     let normalY = 0;
 
-    if (overlapX < overlapY) {
-      // Horizontal collision (less overlap in X direction)
+    // Add small threshold to prevent equal overlap issues
+    const threshold = 0.1;
+    
+    if (overlapX < overlapY - threshold) {
+      // Horizontal collision (clearly less overlap in X direction)
       normalX = (a.x + a.width / 2) < (b.x + b.width / 2) ? -1 : 1;
-    } else {
-      // Vertical collision (less overlap in Y direction or equal)
+      // console.log(`[COLLISION] Horizontal collision detected - normalX: ${normalX}, overlapX: ${overlapX.toFixed(1)}, overlapY: ${overlapY.toFixed(1)}`);
+    } else if (overlapY < overlapX - threshold) {
+      // Vertical collision (clearly less overlap in Y direction)  
       normalY = (a.y + a.height / 2) < (b.y + b.height / 2) ? -1 : 1;
+      // console.log(`[COLLISION] Vertical collision detected - normalY: ${normalY}, overlapX: ${overlapX.toFixed(1)}, overlapY: ${overlapY.toFixed(1)}`);
+    } else {
+      // Ambiguous case - use velocity to determine collision type
+      // This is important for wall sliding where overlaps might be similar
+      const centerAX = a.x + a.width / 2;
+      const centerAY = a.y + a.height / 2;
+      const centerBX = b.x + b.width / 2;
+      const centerBY = b.y + b.height / 2;
+      
+      const deltaX = Math.abs(centerAX - centerBX);
+      const deltaY = Math.abs(centerAY - centerBY);
+      
+      if (deltaX > deltaY) {
+        // Centers are more separated horizontally - likely side collision
+        normalX = centerAX < centerBX ? -1 : 1;
+        // console.log(`[COLLISION] Ambiguous resolved as horizontal - normalX: ${normalX}, deltaX: ${deltaX.toFixed(1)}, deltaY: ${deltaY.toFixed(1)}`);
+      } else {
+        // Centers are more separated vertically - likely top/bottom collision
+        normalY = centerAY < centerBY ? -1 : 1;
+        // console.log(`[COLLISION] Ambiguous resolved as vertical - normalY: ${normalY}, deltaX: ${deltaX.toFixed(1)}, deltaY: ${deltaY.toFixed(1)}`);
+      }
     }
 
     return {

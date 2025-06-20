@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm init:*)",
+      "Bash(npm install:*)",
+      "Bash(mkdir:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(npm run dev:*)",
+      "Bash(ss:*)",
+      "Bash(curl:*)",
+      "Bash(pkill:*)",
+      "Bash(npx vite:*)",
+      "Bash(hostname:*)",
+      "Bash(true)",
+      "Bash(npm run build:*)",
+      "Bash(mv:*)",
+      "Bash(npm run preview:*)",
+      "Bash(python3:*)",
+      "Bash(ls:*)",
+      "Bash(npx serve:*)",
+      "Bash(http-server:*)",
+      "Bash(netsh.exe interface portproxy show:*)",
+      "Bash(rm:*)",
+      "Bash(powershell.exe:*)",
+      "Bash(git checkout:*)",
+      "Bash(cp:*)",
+      "Bash(npm test)",
+      "Bash(npm test:*)",
+      "Bash(timeout 10s npm run dev:*)",
+      "Bash(node:*)",
+      "Bash(npm --version)",
+      "Bash(gh:*)",
+      "Bash(git config:*)",
+      "Bash(brew:*)",
+      "Bash(rg:*)",
+      "Bash(npx tsx:*)"
+    ],
+    "deny": []
+  }
+}

@@ -274,3 +274,37 @@ None currently.
 - **Architecture simplified**: 300+ lines of complex code → 50 lines of reliable code
 - **Maintainability improved**: Single, clear collision handling path
 - **All 142 tests passing**: No regressions, improved reliability
+
+### Phase 2.4 Wall Mechanics Implementation Issues and Fixes
+**Problem**: Multiple wall mechanics bugs affecting wall sliding and wall jumping
+1. **Wall slide falling at regular speed**: Gravity was overriding wall slide deceleration
+2. **Wall slide restoring double jump**: Wall contact was incorrectly restoring double jump
+3. **Wall jump spam exploits**: Various cooldown and timing issues allowing infinite wall jumps
+4. **Fundamental misunderstanding**: Initial implementation had wall jumps restore double jump
+
+**Root Cause Analysis**: 
+- Gravity system (16.33 px/frame) was conflicting with wall slide speed control
+- Wall contact logic was treating wall interaction as equivalent to ground landing
+- Missing cooldown systems allowed wall jump spam between close walls
+- Incorrect game design assumption about double jump restoration
+
+**Solution Strategy**: **Targeted Fixes with Clear Game Rules**
+- **Gravity Exemption**: Modified `applyGravity()` to skip when wall sliding
+- **Double Jump Consumption**: Wall sliding consumes double jump instead of restoring it
+- **Consistent Speed Control**: Wall slide always sets velocity to exactly 60 px/s
+- **Cooldown Systems**: Added wall jump cooldown (8 frames) and control lockout (4 frames)
+- **Clear Game Rule**: Only ground landing restores double jump, never wall interactions
+
+**Technical Implementation**:
+1. **Wall Slide Speed**: Always set `velocity.y = WALL_SLIDE_SPEED` during wall slide
+2. **Double Jump Rule**: Wall jumps NEVER restore double jump (lines 376-377 in PlayerEntity.ts)
+3. **Cooldown Prevention**: Added `wallJumpCooldownFrames` check to `canWallJump()` and `startDoubleJump()`
+4. **Coyote Time**: 6-frame grace period for wall jumps after leaving wall
+5. **Control Lockout**: 4-frame horizontal input lockout after wall jump
+
+**Result**: 
+- **Wall slide mechanics working**: Consistent 60 px/s fall speed when pressing towards wall
+- **Wall jump exploits eliminated**: No more infinite wall jumps or double jump spam
+- **Clear game rules**: Only ground landing restores double jump, creating strategic depth
+- **Smooth wall-to-wall movement**: Proper timing prevents sticky or erratic behavior
+- **All 172 tests passing**: Comprehensive coverage with no regressions
