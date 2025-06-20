@@ -80,6 +80,13 @@ Based on Celeste/Hollow Knight analysis:
 - No exceptions - quality over speed
 - Broken commits destroy project integrity
 
+## CRITICAL WORKFLOW RULES
+**NEVER UPDATE MEMORY.MD OR TODO.MD TO "COMPLETED" UNTIL USER CONFIRMS**
+- Features stay in "AWAITING USER TESTING" status until user confirms they work
+- Only mark phases as completed AFTER user testing confirms functionality
+- When user confirms feature works: THEN update memory.md, todo.md, AND commit to git
+- Memory and todo files should reflect actual tested reality, not implementation status
+
 ## USER TESTING COMMUNICATION PROTOCOL
 **ALWAYS INFORM USER WHAT TO TEST WHEN REQUESTING CONFIRMATION**
 - Clearly explain what was added or changed in this implementation

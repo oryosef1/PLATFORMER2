@@ -2,6 +2,7 @@ import { Entity } from '../ecs/Entity';
 import { PositionComponent } from '../ecs/components/PositionComponent';
 import { VelocityComponent } from '../ecs/components/VelocityComponent';
 import { InputComponent } from '../ecs/components/InputComponent';
+import { CollisionComponent } from '../ecs/components/CollisionComponent';
 import { MovementConstants } from '../physics/MovementConstants';
 
 export interface PlayerVisual {
@@ -29,6 +30,15 @@ export class PlayerEntity extends Entity {
     // Add required components
     this.addComponent('position', new PositionComponent(x, y));
     this.addComponent('velocity', new VelocityComponent(0, 0));
+    this.addComponent('collision', new CollisionComponent(
+      MovementConstants.PLAYER_WIDTH,
+      MovementConstants.PLAYER_HEIGHT,
+      0, // offsetX
+      0, // offsetY
+      false, // isTrigger
+      false, // isStatic
+      'player' // layer
+    ));
     
     // Setup input component with default bindings
     const inputComponent = new InputComponent({
@@ -171,15 +181,7 @@ export class PlayerEntity extends Entity {
   }
 
   public update(deltaTime: number): void {
-    // This will be called every frame to update player state
-    const position = this.getComponent('position') as PositionComponent;
-    const velocity = this.getComponent('velocity') as VelocityComponent;
-    
-    // Update position based on velocity
-    position.x += velocity.x * deltaTime;
-    position.y += velocity.y * deltaTime;
-    
-    // Update visual position
+    // Update visual position (collision system handles position updates)
     this.updateVisualPosition();
   }
 

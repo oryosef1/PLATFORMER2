@@ -1,9 +1,9 @@
 # Project Memory - Metroidvania Platformer
 
 ## Current Status
-**Date**: 2025-06-19
-**Phase**: Phase 2.2 Enhanced Jumping System - COMPLETED ✅
-**Last Updated**: Enhanced jumping system complete with all 108 tests passing
+**Date**: 2025-06-20
+**Phase**: Phase 2.3 Collision System - COMPLETED
+**Last Updated**: Collision system completed with critical architecture fixes, ready for Phase 2.4
 
 ## Completed Features
 - ✅ Project initialization with Vite + TypeScript + Phaser 3
@@ -59,9 +59,27 @@
   - ✅ Proper rendering depth (player appears on top of platforms)
   - ✅ All 108 tests passing (19 jump tests + 89 existing)
   - ✅ User testing completed and confirmed working
+- ✅ **Phase 2.3 Collision System - COMPLETED**
+  - ✅ CollisionComponent with AABB bounding boxes and tags
+  - ✅ Advanced AABB collision detection with normal calculation
+  - ✅ Collision response system with proper position/velocity resolution
+  - ✅ Spatial hashing optimization for large numbers of entities (64px cells)
+  - ✅ CollisionSystem class for managing all collision entities
+  - ✅ Debug visualization system with collision box rendering
+  - ✅ Entity tagging system for collision layers and filtering
+  - ✅ Integration with existing ECS architecture
+  - ✅ Player and Platform entities with collision components
+  - ✅ GameScene updated to use new collision system (no more Phaser physics dependency)
+  - ✅ **CRITICAL ARCHITECTURE FIXES**: Resolved double movement application and conflicting collision resolution
+  - ✅ **STICKY MOVEMENT FIXED**: Eliminated slow/stuttering movement on platforms
+  - ✅ **PLATFORM TUNNELING FIXED**: Cannot jump through platforms anymore, even near edges
+  - ✅ Simplified collision system architecture for reliability and maintainability
+  - ✅ All 142 tests passing (34 collision tests + 108 existing)
+  - ✅ User testing completed and confirmed working
 
 ## Current Work
-- Ready to begin Phase 2.3: Collision System
+- Phase 2.3 Collision System completed successfully
+- Ready to begin Phase 2.4: Advanced Movement (wall sliding, wall jumping, dash mechanics)
 
 ## Important Learnings - WSL2 Development & Vite Setup
 1. **WSL2 Networking Issue**: WSL2 uses a virtual network adapter that doesn't always communicate well with Windows host
@@ -104,7 +122,7 @@ PLATFORMER/
 - **Dev**: vite, typescript, vitest, @playwright/test, @types/node, jsdom, canvas, @vitest/ui
 
 ## Test Coverage
-- **108 tests passing** - comprehensive coverage of Phases 1.2, 1.3, 1.4, 2.1, and 2.2
+- **142 tests passing** - comprehensive coverage of Phases 1.2, 1.3, 1.4, 2.1, 2.2, and 2.3
 - **Game Logic Tests**: 13 tests covering dimensions, colors, positions, physics
 - **FPS Tests**: 8 tests covering calculation logic, timing, and performance
 - **ECS Component Tests**: 15 tests covering PositionComponent and VelocityComponent
@@ -112,6 +130,7 @@ PLATFORMER/
 - **Input System Tests**: 18 tests covering InputManager, buffer system, and InputComponent
 - **Player Entity Tests**: 22 tests covering movement physics, gravity, ground detection, and collision
 - **Jump System Tests**: 19 tests covering variable height, coyote time, buffering, double jump, and state management
+- **Collision System Tests**: 34 tests covering AABB detection, collision response, spatial hashing, and collision normals
 - **Test Strategy**: Simplified logic tests instead of complex Phaser mocking
 
 ## Key Decisions Made
@@ -222,3 +241,36 @@ None currently.
    - **Solution**: Modified jump logic to try double jump if regular jump fails
 
 **Result**: All jumping mechanics working perfectly with 108 tests passing
+
+### Phase 2.3 Critical Collision System Architecture Issues
+**Problem**: Multiple severe architectural issues causing sticky movement and platform tunneling
+1. **Double Movement Application**: Movement applied twice per frame (CollisionSystem + GameScene)
+2. **Conflicting Resolution Systems**: Three different collision resolution methods fighting each other
+3. **Swept Collision Bugs**: Incorrect positioning causing overshooting and tunneling
+4. **Complex Validation**: Over-engineered validation logic running too late to be effective
+
+**Root Cause Analysis**: 
+- CollisionSystem.update() applied `velocity * deltaTime` to position (first movement)
+- GameScene called collision system, which had already moved entities (second movement)
+- Three resolution systems: CollisionSystem.resolveCollision(), CollisionSystem.resolveSweptCollision(), and GameScene validation
+- Systems fought each other: one would move player, another would reject/undo the movement
+- Result: Stuttering, sticky movement, position corrections, and platform tunneling
+
+**Solution Strategy**: **Architectural Simplification**
+- **Single Movement Application**: Only GameScene applies movement, CollisionSystem only detects
+- **Single Resolution Path**: Only GameScene handles collision resolution, eliminated complex swept collision
+- **Clear Sequence**: Move → Detect → Resolve → Done
+- **Simplified Detection**: Removed edge thresholds and complex validation logic
+
+**Technical Implementation**:
+1. **Removed double movement** from CollisionSystem.update() lines 37-48
+2. **Centralized movement** in GameScene: apply movement first, then detect collisions
+3. **Simplified resolution**: Basic overlap correction with clear collision type handling
+4. **Eliminated conflicts**: Removed swept collision and multiple resolution paths
+
+**Result**: 
+- **Sticky movement eliminated**: Smooth, responsive player movement on all surfaces
+- **Platform tunneling fixed**: Cannot jump through platforms even near edges  
+- **Architecture simplified**: 300+ lines of complex code → 50 lines of reliable code
+- **Maintainability improved**: Single, clear collision handling path
+- **All 142 tests passing**: No regressions, improved reliability

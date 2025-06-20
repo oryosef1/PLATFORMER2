@@ -1,50 +1,75 @@
 import Phaser from 'phaser';
 import { InputManager } from '../input/InputManager';
 import { PlayerEntity } from '../entities/PlayerEntity';
+import { PlatformEntity } from '../entities/PlatformEntity';
 import { PositionComponent } from '../ecs/components/PositionComponent';
 import { VelocityComponent } from '../ecs/components/VelocityComponent';
+import { CollisionSystem } from '../ecs/systems/CollisionSystem';
+import { DebugCollision } from '../utils/DebugCollision';
 
 export class GameScene extends Phaser.Scene {
   private playerVisual!: Phaser.GameObjects.Rectangle;
   private playerEntity!: PlayerEntity;
-  private platforms!: Phaser.GameObjects.Group;
+  private platformEntities: PlatformEntity[] = [];
+  private platformVisuals: Phaser.GameObjects.Rectangle[] = [];
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private inputManager!: InputManager;
   private inputDebugText!: Phaser.GameObjects.Text;
   private playerDebugText!: Phaser.GameObjects.Text;
+  private collisionSystem!: CollisionSystem;
+  private debugCollision!: DebugCollision;
+  private debugModeEnabled: boolean = true;
 
   constructor() {
     super({ key: 'GameScene' });
   }
 
   create() {
-    // Create platforms group
-    this.platforms = this.add.group();
+    // Initialize collision system
+    this.collisionSystem = new CollisionSystem(64); // 64px spatial hash cells
+    console.log('[GAME] CollisionSystem initialized');
     
-    // Create ground platform
-    const ground = this.add.rectangle(512, 700, 1024, 100, 0x27ae60);
-    this.physics.add.existing(ground, true); // true = static body
-    ground.setDepth(0); // Platforms at depth 0
-    this.platforms.add(ground);
+    // Initialize debug collision visualization
+    this.debugCollision = new DebugCollision(this);
+    this.debugCollision.setEnabled(this.debugModeEnabled);
+    console.log('[GAME] DebugCollision initialized');
     
-    // Create floating platforms
-    const platform1 = this.add.rectangle(400, 500, 200, 32, 0x27ae60);
-    this.physics.add.existing(platform1, true);
-    platform1.setDepth(0); // Platforms at depth 0
-    this.platforms.add(platform1);
+    // Create platform entities with ECS
+    // Ground platform
+    const groundEntity = new PlatformEntity(512, 700, 1024, 100);
+    this.platformEntities.push(groundEntity);
+    this.collisionSystem.addEntity(groundEntity);
     
-    const platform2 = this.add.rectangle(700, 350, 200, 32, 0x27ae60);
-    this.physics.add.existing(platform2, true);
-    platform2.setDepth(0); // Platforms at depth 0
-    this.platforms.add(platform2);
+    // Create visual for ground
+    const groundVisual = this.add.rectangle(512, 700, 1024, 100, 0x27ae60);
+    groundVisual.setDepth(0);
+    this.platformVisuals.push(groundVisual);
+    
+    // Floating platforms
+    const platform1Entity = new PlatformEntity(400, 500, 200, 32);
+    this.platformEntities.push(platform1Entity);
+    this.collisionSystem.addEntity(platform1Entity);
+    
+    const platform1Visual = this.add.rectangle(400, 500, 200, 32, 0x27ae60);
+    platform1Visual.setDepth(0);
+    this.platformVisuals.push(platform1Visual);
+    
+    const platform2Entity = new PlatformEntity(700, 350, 200, 32);
+    this.platformEntities.push(platform2Entity);
+    this.collisionSystem.addEntity(platform2Entity);
+    
+    const platform2Visual = this.add.rectangle(700, 350, 200, 32, 0x27ae60);
+    platform2Visual.setDepth(0);
+    this.platformVisuals.push(platform2Visual);
     
     // Create ECS-based player entity - position to be on ground
     // Ground is at Y=700 with height 100, so top of ground is at Y=650
     // Player height is 48, so player center should be at Y=650-24=626
     this.playerEntity = new PlayerEntity(100, 626); // Start on ground platform
-    console.log('[GAME] PlayerEntity created at ground level');
+    this.collisionSystem.addEntity(this.playerEntity);
+    console.log('[GAME] PlayerEntity created at ground level and added to collision system');
     
-    // Create visual representation for player
+    // Create visual representation for player (no physics body needed)
     const playerVisual = this.playerEntity.getVisual();
     this.playerVisual = this.add.rectangle(
       playerVisual.x, 
@@ -53,75 +78,9 @@ export class GameScene extends Phaser.Scene {
       playerVisual.height, 
       0xe74c3c
     );
-    this.physics.add.existing(this.playerVisual);
     
     // Set player depth to render on top of platforms
     this.playerVisual.setDepth(100);
-    
-    // Configure player physics
-    const playerBody = this.playerVisual.body as Phaser.Physics.Arcade.Body;
-    playerBody.setBounce(0);
-    playerBody.setCollideWorldBounds(true);
-    
-    // Player-platform collisions
-    this.physics.add.collider(this.playerVisual, this.platforms, (player, platform) => {
-      const wasGrounded = this.playerEntity.isOnGround();
-      const velocity = this.playerEntity.getComponent('velocity') as VelocityComponent;
-      const platformBody = platform.body as Phaser.Physics.Arcade.Body;
-      const playerBody = player.body as Phaser.Physics.Arcade.Body;
-      
-      // Check if player is landing on top of platform (not hitting sides)
-      const playerBottom = playerBody.y + playerBody.height;
-      const platformTop = platformBody.y;
-      const playerCenterX = playerBody.x + playerBody.width / 2;
-      const platformLeft = platformBody.x;
-      const platformRight = platformBody.x + platformBody.width;
-      
-      // Only treat as "landing" if:
-      // 1. Player was in air and falling (velocity.y > 0)
-      // 2. Player's center X is within platform bounds
-      // 3. Player's bottom is close to platform top (within collision tolerance)
-      const isLandingOnTop = !wasGrounded && 
-                           velocity.y > 0 && 
-                           playerCenterX >= platformLeft && 
-                           playerCenterX <= platformRight &&
-                           Math.abs(playerBottom - platformTop) < 20; // 20px tolerance
-      
-      if (isLandingOnTop) {
-        // Position player exactly on top of platform
-        const correctedY = platformTop - playerBody.height/2;
-        
-        // Update ECS position to match corrected position
-        const position = this.playerEntity.getComponent('position') as PositionComponent;
-        position.y = correctedY;
-        
-        console.log(`[COLLISION] Player landed on top - corrected Y to ${correctedY}`);
-        
-        // Set ground state only when actually landing on top
-        this.playerEntity.setGroundState(true);
-      } else {
-        // Side collision - don't change ground state or position
-        console.log(`[COLLISION] Side collision detected - no ground state change`);
-      }
-    });
-    
-    // Detect when player leaves ground
-    // Note: This runs AFTER collision detection, so we check if the player is still touching ground
-    this.physics.world.on('worldstep', () => {
-      const body = this.playerVisual.body as Phaser.Physics.Arcade.Body;
-      const touchingDown = body.touching.down;
-      const blockedDown = body.blocked.down;
-      const isCurrentlyGrounded = this.playerEntity.isOnGround();
-      
-      // Only set to false if we were grounded but are no longer touching
-      if (isCurrentlyGrounded && !touchingDown && !blockedDown) {
-        console.log(`[GROUND_CHECK] Player left ground`);
-        this.playerEntity.setGroundState(false);
-      } else if ((touchingDown || blockedDown) && !isCurrentlyGrounded) {
-        console.log(`[GROUND_CHECK] Player touched ground`);
-        this.playerEntity.setGroundState(true);
-      }
-    });
     
     // Create cursor keys (arrow keys only)
     this.cursors = this.input.keyboard!.createCursorKeys();
@@ -135,7 +94,15 @@ export class GameScene extends Phaser.Scene {
     this.add.text(10, 70, 'Arrow Keys to move', { fontSize: '14px', color: '#ffffff' });
     this.add.text(10, 90, 'UP to jump (hold for higher)', { fontSize: '14px', color: '#ffffff' });
     this.add.text(10, 110, 'UP twice for double jump', { fontSize: '14px', color: '#ffffff' });
-    this.add.text(10, 130, 'Check console for jump debugging', { fontSize: '12px', color: '#ffff00' });
+    this.add.text(10, 130, 'C - Toggle collision debug', { fontSize: '12px', color: '#ffff00' });
+    this.add.text(10, 150, 'Check console for collision debugging', { fontSize: '12px', color: '#ffff00' });
+    
+    // Add debug controls
+    this.input.keyboard!.on('keydown-C', () => {
+      this.debugModeEnabled = !this.debugModeEnabled;
+      this.debugCollision.setEnabled(this.debugModeEnabled);
+      console.log(`[DEBUG] Collision debug: ${this.debugModeEnabled ? 'ON' : 'OFF'}`);
+    });
     
     // Player position debug
     this.add.text(10, 160, 'Player Position:', { fontSize: '16px', color: '#ffffff' });
@@ -179,7 +146,6 @@ export class GameScene extends Phaser.Scene {
     // IMPORTANT: Check for jump input BEFORE updating InputManager (which clears justPressed flags)
     const wasUpPressed = this.inputManager.isKeyJustPressed('ArrowUp') || this.cursors.up?.justDown;
     const wasUpReleased = this.inputManager.isKeyJustReleased('ArrowUp') || this.cursors.up?.justUp;
-    
     
     // Now update InputManager (this clears justPressed flags)
     this.inputManager.update();
@@ -237,25 +203,86 @@ export class GameScene extends Phaser.Scene {
     this.playerEntity.updateCoyoteTime(deltaSeconds);
     this.playerEntity.updateJumpBuffer(deltaSeconds);
     
-    // Update player entity with delta time - ECS is source of truth
+    // SIMPLIFIED COLLISION SYSTEM - Apply movement first, then detect and resolve
+    
+    // Step 1: Apply movement to player
+    const position = this.playerEntity.getComponent<PositionComponent>('position')!;
+    const velocity = this.playerEntity.getComponent<VelocityComponent>('velocity')!;
+    
+    // Store original position for collision detection
+    const originalX = position.x;
+    const originalY = position.y;
+    
+    // Apply movement
+    position.x += velocity.x * deltaSeconds;
+    position.y += velocity.y * deltaSeconds;
+    
+    // Step 2: Check for collisions after movement
+    const collisions = this.collisionSystem.update(deltaSeconds);
+    
+    // Step 3: Process and resolve collisions
+    for (const collision of collisions) {
+      if (collision.entityA === this.playerEntity || collision.entityB === this.playerEntity) {
+        const platform = collision.entityA === this.playerEntity ? collision.entityB : collision.entityA;
+        
+        console.log(`[COLLISION] Player collision detected:`);
+        console.log(`[COLLISION] Normal: ${collision.collisionInfo.normalX}, ${collision.collisionInfo.normalY}`);
+        console.log(`[COLLISION] Overlap: ${collision.collisionInfo.overlapX.toFixed(1)}, ${collision.collisionInfo.overlapY.toFixed(1)}`);
+        console.log(`[COLLISION] Player velocity: ${velocity.x.toFixed(1)}, ${velocity.y.toFixed(1)}`);
+        
+        // Simple, robust collision resolution
+        if (collision.collisionInfo.normalY === -1 && velocity.y >= 0) {
+          // Landing on top of platform (falling down)
+          position.y -= collision.collisionInfo.overlapY;
+          velocity.y = 0;
+          if (!this.playerEntity.isOnGround()) {
+            console.log('[COLLISION] Player landed on platform');
+            this.playerEntity.setGroundState(true);
+          }
+        } else if (collision.collisionInfo.normalY === 1 && velocity.y <= 0) {
+          // Hitting ceiling (jumping up)
+          position.y += collision.collisionInfo.overlapY;
+          velocity.y = 0;
+          console.log('[COLLISION] Player hit ceiling');
+        } else if (collision.collisionInfo.normalX !== 0) {
+          // Side collision
+          if (collision.collisionInfo.normalX === -1) {
+            position.x -= collision.collisionInfo.overlapX;
+          } else {
+            position.x += collision.collisionInfo.overlapX;
+          }
+          velocity.x = 0;
+          console.log('[COLLISION] Player hit wall');
+        }
+      }
+    }
+    
+    // Check if player left ground (no longer colliding with any platform from below)
+    const isStillOnGround = collisions.some(collision => {
+      const isPlayerCollision = collision.entityA === this.playerEntity || collision.entityB === this.playerEntity;
+      return isPlayerCollision && collision.collisionInfo.normalY === -1 && velocity.y >= 0;
+    });
+    
+    if (this.playerEntity.isOnGround() && !isStillOnGround) {
+      console.log('[COLLISION] Player left ground - no platform collision');
+      this.playerEntity.setGroundState(false);
+    }
+    
+    // Update player entity visual position only (movement already applied above)
     this.playerEntity.update(deltaSeconds);
     
-    // Get final position from ECS
-    const position = this.playerEntity.getComponent('position') as PositionComponent;
-    const velocity = this.playerEntity.getComponent('velocity') as VelocityComponent;
+    // Get final position from ECS for visual sync
+    const finalPosition = this.playerEntity.getComponent('position') as PositionComponent;
+    const finalVelocity = this.playerEntity.getComponent('velocity') as VelocityComponent;
     
-    // Update Phaser visual position directly (no physics body movement)
-    this.playerVisual.x = position.x;
-    this.playerVisual.y = position.y;
+    // Update Phaser visual position directly
+    this.playerVisual.x = finalPosition.x;
+    this.playerVisual.y = finalPosition.y;
     
-    // Update Phaser physics body position for collision detection only
-    const playerBody = this.playerVisual.body as Phaser.Physics.Arcade.Body;
-    playerBody.x = position.x - this.playerVisual.width/2;
-    playerBody.y = position.y - this.playerVisual.height/2;
+    // Update debug collision visualization
+    const allEntities = [this.playerEntity, ...this.platformEntities];
+    this.debugCollision.update(allEntities, collisions, 64);
     
-    // Stop Phaser from moving the body with velocity
-    playerBody.setVelocity(0, 0);
-    
-    console.log(`[SYNC] ECS pos: (${position.x.toFixed(1)}, ${position.y.toFixed(1)}) vel: (${velocity.x.toFixed(1)}, ${velocity.y.toFixed(1)}) body: (${playerBody.x.toFixed(1)}, ${playerBody.y.toFixed(1)})`);
+    console.log(`[SYNC] ECS pos: (${finalPosition.x.toFixed(1)}, ${finalPosition.y.toFixed(1)}) vel: (${finalVelocity.x.toFixed(1)}, ${finalVelocity.y.toFixed(1)})`);
   }
 }
