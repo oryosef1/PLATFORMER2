@@ -74,6 +74,12 @@ export class MovementConstants {
   
   // Combat Mechanics
   public static readonly ATTACK_COOLDOWN_FRAMES = 15; // frames between attacks (0.25 seconds at 60fps)
+  
+  // Pogo Jumping Mechanics
+  public static readonly POGO_BOUNCE_FORCE = 400; // pixels/second upward velocity on pogo bounce
+  public static readonly POGO_SUCCESS_WINDOW_FRAMES = 10; // frames after downward attack where pogo bounce is available
+  public static readonly POGO_ATTACK_DURATION_FRAMES = 4; // frames pogo hitbox is active (faster than normal attack)
+  public static readonly POGO_COOLDOWN_FRAMES = 8; // frames before pogo can be used again (0.13 seconds at 60fps) - faster for chaining
 }
 
 console.log('[PHYSICS] MovementConstants loaded:', {

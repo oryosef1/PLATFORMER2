@@ -1,9 +1,9 @@
 # Project Memory - Metroidvania Platformer
 
 ## Current Status
-**Date**: 2025-06-20
-**Phase**: Phase 2.4 Advanced Movement - COMPLETED
-**Last Updated**: Dash and sprint mechanics completed with Hollow Knight-style implementation and critical double jump bug fixed, ready for Phase 3.1
+**Date**: 2025-06-21
+**Phase**: Phase 3.1.1 Pogo Jumping - COMPLETED
+**Last Updated**: Complete pogo jumping system with upward attacks and standardized attack dimensions (side 50x16, vertical 16x50), ready for Phase 3.2
 
 ## Completed Features
 - ✅ Project initialization with Vite + TypeScript + Phaser 3
@@ -106,7 +106,22 @@
   - ✅ Enemy damage flash visual feedback
   - ✅ Player invincibility flash visual feedback
   - ✅ All combat features working and tested
-- Ready to begin Phase 3.1.1: Pogo Jumping (Combat-Movement Integration)
+- ✅ **Phase 3.1.1 Pogo Jumping - COMPLETED**
+  - ✅ Pogo jumping mechanics with DOWN + Z input combination
+  - ✅ Downward attack hitbox creation positioned below player (16x50 dimensions)
+  - ✅ Upward attack functionality with UP + Z input combination (16x50 dimensions)
+  - ✅ Regular side attacks with proper dimensions (50x16 for horizontal reach)
+  - ✅ Attack dimension standardization: side attacks 50x16, vertical attacks 16x50
+  - ✅ Pogo bounce system with 400 px/s upward velocity
+  - ✅ 10-frame success window after downward attack
+  - ✅ Automatic pogo bounce on enemy hit detection
+  - ✅ Pogo chain mechanics (infinite bounces with timing)
+  - ✅ Integration with existing combat and movement systems
+  - ✅ Enhanced screen shake for pogo hits (10 intensity vs 8 for regular hits)
+  - ✅ Pogo target detection (works on enemies, not platforms)
+  - ✅ All sword visuals updated to match hitbox dimensions
+  - ✅ All 23 pogo/positioning tests passing (249 total tests)
+- Ready to begin Phase 3.2: Enemy System
 
 ## Important Learnings - WSL2 Development & Vite Setup
 1. **WSL2 Networking Issue**: WSL2 uses a virtual network adapter that doesn't always communicate well with Windows host
@@ -149,7 +164,7 @@ PLATFORMER/
 - **Dev**: vite, typescript, vitest, @playwright/test, @types/node, jsdom, canvas, @vitest/ui
 
 ## Test Coverage
-- **204 tests passing** - comprehensive coverage of Phases 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, and 2.4
+- **249 tests passing** - comprehensive coverage of Phases 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, 3.1, and 3.1.1
 - **Game Logic Tests**: 13 tests covering dimensions, colors, positions, physics
 - **FPS Tests**: 8 tests covering calculation logic, timing, and performance
 - **ECS Component Tests**: 15 tests covering PositionComponent and VelocityComponent
@@ -160,6 +175,8 @@ PLATFORMER/
 - **Collision System Tests**: 34 tests covering AABB detection, collision response, spatial hashing, and collision normals
 - **Wall Mechanics Tests**: 30 tests covering wall detection, sliding, jumping, and cooldown systems
 - **Dash/Sprint Tests**: 32 tests covering Hollow Knight-style dash mechanics and sprint stamina management
+- **Pogo Mechanics Tests**: 19 tests covering downward attacks, bounce mechanics, and chaining
+- **Pogo Positioning Tests**: 4 tests covering hitbox positioning and visual synchronization
 - **Test Strategy**: Simplified logic tests instead of complex Phaser mocking
 
 ## Key Decisions Made

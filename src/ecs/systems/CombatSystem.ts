@@ -40,9 +40,9 @@ export class CombatSystem {
       const position = entity.getComponent<PositionComponent>('position');
 
       if (hitbox && position) {
-        // Don't update hitbox position if it's a melee attack - melee hitboxes have their own offset positioning
-        if (hitbox.attackType !== 'melee') {
-          // Only update position for non-melee hitboxes (like projectiles)
+        // Don't update hitbox position if it's a melee or pogo attack - these hitboxes have their own offset positioning handled by PlayerEntity
+        if (hitbox.attackType !== 'melee' && hitbox.attackType !== 'pogo') {
+          // Only update position for projectiles and other moving hitboxes
           hitbox.updatePosition(position.x, position.y);
         }
         hitbox.update();
@@ -118,6 +118,19 @@ export class CombatSystem {
     // Trigger visual feedback for enemy damage
     if ((targetEntity as any).startDamageFlash) {
       (targetEntity as any).startDamageFlash();
+    }
+
+    // Check for pogo bounce - if this is a pogo attack hitting an enemy, trigger bounce
+    if (hitbox.attackType === 'pogo' && (attackerEntity as any).executePogoBounce) {
+      const bounceSuccess = (attackerEntity as any).executePogoBounce();
+      if (bounceSuccess) {
+        console.log('[COMBAT] Pogo bounce triggered on enemy hit!');
+        
+        // Restore abilities for pogo bouncing
+        if ((attackerEntity as any).restoreAbilitiesOnPogo) {
+          (attackerEntity as any).restoreAbilitiesOnPogo();
+        }
+      }
     }
 
     // Calculate knockback

@@ -242,6 +242,7 @@ export class GameScene extends Phaser.Scene {
         `Stamina: ${playerDebug.sprint.stamina}/${playerDebug.sprint.maxStamina} | Can Sprint: ${playerDebug.sprint.canSprint}\n` +
         `Attack: ${playerDebug.combat.attacking} | Frames: ${playerDebug.combat.attackFrames} | Cooldown: ${playerDebug.combat.attackCooldown}\n` +
         `Health: ${playerDebug.combat.health}/${playerDebug.combat.maxHealth} | Can Attack: ${playerDebug.combat.canAttack}\n` +
+        `Pogo Window: ${playerDebug.pogo.successWindow} | Can Pogo: ${playerDebug.pogo.hasActiveWindow}\n` +
         `Enemy Health: ${this.testEnemyEntity.getCurrentHealth()}/${this.testEnemyEntity.getMaxHealth()}`
       );
       
@@ -283,15 +284,15 @@ export class GameScene extends Phaser.Scene {
     const isOnGround = this.playerEntity.isOnGround();
     
     if (leftPressed) {
-      this.playerEntity.applyMovement('left', true, isOnGround);
+      this.playerEntity.applyMovement('left', true, isOnGround, deltaSeconds);
     } else if (rightPressed) {
-      this.playerEntity.applyMovement('right', true, isOnGround);
+      this.playerEntity.applyMovement('right', true, isOnGround, deltaSeconds);
     } else {
-      this.playerEntity.applyMovement('none', false, isOnGround);
+      this.playerEntity.applyMovement('none', false, isOnGround, deltaSeconds);
     }
     
-    // Apply gravity
-    this.playerEntity.applyGravity();
+    // Apply gravity with proper deltaTime
+    this.playerEntity.applyGravity(deltaSeconds);
     
     // Update wall sliding (must be done after gravity)
     this.playerEntity.updateWallSlide(leftPressed, rightPressed);
@@ -372,10 +373,36 @@ export class GameScene extends Phaser.Scene {
     
     // Handle attack input
     if (wasAttackPressed) {
-      if (this.playerEntity.executeAttack()) {
-        console.log('[COMBAT] Attack executed');
+      // Check directional modifiers for attack type
+      const downPressed = this.cursors.down?.isDown || this.inputManager.isKeyDown('ArrowDown');
+      const upPressed = this.cursors.up?.isDown || this.inputManager.isKeyDown('ArrowUp');
+      
+      console.log(`[ATTACK_DEBUG] Attack pressed - DOWN: ${downPressed}, UP: ${upPressed}, Grounded: ${this.playerEntity.isOnGround()}`);
+      
+      if (downPressed) {
+        // Execute downward pogo attack (DOWN + Z)
+        console.log('[POGO] Attempting downward attack...');
+        if (this.playerEntity.executeDownwardAttack()) {
+          console.log('[POGO] Downward attack executed successfully');
+        } else {
+          console.log('[POGO] Downward attack failed - must be in air');
+        }
+      } else if (upPressed) {
+        // Execute upward attack (UP + Z)
+        console.log('[UPWARD] Attempting upward attack...');
+        if (this.playerEntity.executeUpwardAttack()) {
+          console.log('[UPWARD] Upward attack executed successfully');
+        } else {
+          console.log('[UPWARD] Upward attack failed - already attacking');
+        }
       } else {
-        console.log('[COMBAT] Attack failed - already attacking');
+        // Regular horizontal attack
+        console.log('[COMBAT] Attempting regular attack...');
+        if (this.playerEntity.executeAttack()) {
+          console.log('[COMBAT] Attack executed');
+        } else {
+          console.log('[COMBAT] Attack failed - already attacking');
+        }
       }
     }
     
@@ -426,8 +453,24 @@ export class GameScene extends Phaser.Scene {
       for (const result of combatResults) {
         console.log(`[COMBAT] ${result.attacker.id} dealt ${result.damage} damage to ${result.target.id}`);
         
-        // Trigger screen shake on successful hits
-        this.startScreenShake(8, 12); // 8 intensity, 12 frames duration
+        // Check if this was a pogo attack hitting an enemy
+        if (result.attacker === this.playerEntity && result.target === this.testEnemyEntity) {
+          const playerHitbox = this.playerEntity.getComponent('hitbox');
+          if (playerHitbox && playerHitbox.type === 'pogo') {
+            // Execute pogo bounce automatically when pogo attack hits enemy
+            if (this.playerEntity.executePogoBounce()) {
+              console.log('[POGO] Auto-bounce executed after hitting enemy');
+              // Add stronger screen shake for pogo hits
+              this.startScreenShake(10, 14); // Slightly stronger than regular hits
+            }
+          } else {
+            // Regular attack screen shake
+            this.startScreenShake(8, 12); // 8 intensity, 12 frames duration
+          }
+        } else {
+          // Regular screen shake for other combat interactions
+          this.startScreenShake(8, 12); // 8 intensity, 12 frames duration
+        }
       }
     }
     
@@ -620,6 +663,7 @@ export class GameScene extends Phaser.Scene {
     this.playerVisual.x = finalPosition.x;
     this.playerVisual.y = finalPosition.y;
     
+    
     // Update player visual for invincibility feedback
     this.updatePlayerVisualEffects();
     
@@ -667,30 +711,77 @@ export class GameScene extends Phaser.Scene {
       // Show sword visual during attack
       this.swordVisual.setVisible(true);
       
-      // Position sword visual properly outside the player
-      const facingDirection = this.playerEntity.getFacingDirection();
-      const playerHalfWidth = 32 / 2; // Player is 32 pixels wide
-      const swordGap = 4; // Small gap between player and sword
-      const swordWidth = 40; // Sword dimensions
-      const swordHeight = 16;
+      // Check attack type from hitbox
+      const playerHitbox = this.playerEntity.getComponent('hitbox');
+      const attackType = playerHitbox ? playerHitbox.attackType : 'melee';
       
-      // Calculate where the sword visual should be positioned
-      // We want the sword to appear next to the player, not overlapping
-      const swordCenterX = playerPosition.x + (facingDirection * (playerHalfWidth + swordGap + swordWidth/2));
-      const swordCenterY = playerPosition.y;
-      
-      // Position sword visual
-      this.swordVisual.x = swordCenterX;
-      this.swordVisual.y = swordCenterY;
+      if (attackType === 'pogo') {
+        // Downward attack - sword below player (rotated)
+        // Use same positioning logic as hitbox creation in PlayerEntity
+        const playerHalfHeight = MovementConstants.PLAYER_HEIGHT / 2; // Use constant like PlayerEntity
+        const swordGap = 4; // Small gap between player and sword
+        const swordWidth = 16; // Standardized attack width
+        const swordHeight = 50; // Standardized attack height
+        
+        // Position sword below player - EXACTLY matching PlayerEntity hitbox positioning
+        const swordCenterX = playerPosition.x;
+        const swordCenterY = playerPosition.y + playerHalfHeight + swordGap + (swordHeight / 2);
+        
+        // Set sword visual for downward attack
+        this.swordVisual.x = swordCenterX;
+        this.swordVisual.y = swordCenterY;
+        this.swordVisual.setSize(swordWidth, swordHeight); // Rotated dimensions
+        this.swordVisual.setVisible(true); // Ensure it's visible
+        
+        console.log(`[POGO_SWORD] DOWNWARD SWORD: Player at (${playerPosition.x.toFixed(1)}, ${playerPosition.y.toFixed(1)}), Sword at (${swordCenterX.toFixed(1)}, ${swordCenterY.toFixed(1)}) size ${swordWidth}x${swordHeight}`);
+        console.log(`[POGO_SWORD] PLAYER RECT: (${this.playerVisual.x}, ${this.playerVisual.y}) size ${this.playerVisual.width}x${this.playerVisual.height}`);
+        console.log(`[POGO_SWORD] SWORD RECT: (${this.swordVisual.x}, ${this.swordVisual.y}) size ${this.swordVisual.width}x${this.swordVisual.height}`);
+        console.log(`[POGO_SWORD] DISTANCE: ${swordCenterY - playerPosition.y} pixels below player`);
+      } else if (attackType === 'upward') {
+        // Upward attack - sword above player (rotated)
+        // Use same positioning logic as hitbox creation in PlayerEntity
+        const playerHalfHeight = MovementConstants.PLAYER_HEIGHT / 2; // Use constant like PlayerEntity
+        const swordGap = 4; // Small gap between player and sword
+        const swordWidth = 16; // Standardized attack width
+        const swordHeight = 50; // Standardized attack height
+        
+        // Position sword above player - EXACTLY matching PlayerEntity hitbox positioning
+        const swordCenterX = playerPosition.x;
+        const swordCenterY = playerPosition.y - playerHalfHeight - swordGap - (swordHeight / 2);
+        
+        // Set sword visual for upward attack
+        this.swordVisual.x = swordCenterX;
+        this.swordVisual.y = swordCenterY;
+        this.swordVisual.setSize(swordWidth, swordHeight); // Rotated dimensions
+        this.swordVisual.setVisible(true); // Ensure it's visible
+        
+        console.log(`[UPWARD_SWORD] UPWARD SWORD: Player at (${playerPosition.x.toFixed(1)}, ${playerPosition.y.toFixed(1)}), Sword at (${swordCenterX.toFixed(1)}, ${swordCenterY.toFixed(1)}) size ${swordWidth}x${swordHeight}`);
+        console.log(`[UPWARD_SWORD] DISTANCE: ${playerPosition.y - swordCenterY} pixels above player`);
+      } else {
+        // Regular horizontal attack
+        const facingDirection = this.playerEntity.getFacingDirection();
+        const playerHalfWidth = 32 / 2; // Player is 32 pixels wide
+        const swordGap = 4; // Small gap between player and sword
+        const swordWidth = 50; // Side attack width (horizontal)
+        const swordHeight = 16; // Side attack height (horizontal)
+        
+        // Calculate where the sword visual should be positioned
+        // We want the sword to appear next to the player, not overlapping
+        const swordCenterX = playerPosition.x + (facingDirection * (playerHalfWidth + swordGap + swordWidth/2));
+        const swordCenterY = playerPosition.y;
+        
+        // Set sword visual for horizontal attack
+        this.swordVisual.x = swordCenterX;
+        this.swordVisual.y = swordCenterY;
+        this.swordVisual.setSize(swordWidth, swordHeight); // Horizontal dimensions (50x16)
+        
+        console.log(`[SWORD_DEBUG] Horizontal sword at (${swordCenterX.toFixed(1)}, ${swordCenterY.toFixed(1)}) size ${swordWidth}x${swordHeight}`);
+      }
       
       // Get hitbox position for comparison
-      const playerHitbox = this.playerEntity.getComponent('hitbox');
       if (playerHitbox) {
         const hitboxAABB = playerHitbox.getAABB();
-        console.log(`[SWORD_DEBUG] Player at (${playerPosition.x.toFixed(1)}, ${playerPosition.y.toFixed(1)})`);
-        console.log(`[SWORD_DEBUG] Sword visual at (${swordCenterX.toFixed(1)}, ${swordCenterY.toFixed(1)})`);
         console.log(`[SWORD_DEBUG] Hitbox at (${hitboxAABB.x.toFixed(1)}, ${hitboxAABB.y.toFixed(1)}) size ${hitboxAABB.width}x${hitboxAABB.height}`);
-        console.log(`[SWORD_DEBUG] Facing: ${facingDirection > 0 ? 'RIGHT' : 'LEFT'}`);
       }
       
       // Optional: Add visual effects

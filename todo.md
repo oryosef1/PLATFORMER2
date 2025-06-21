@@ -206,28 +206,34 @@
 - ✅ Implement screen shake on player hit (12 intensity, 15 frames - stronger)
 
 #### 3.1.1 Pogo Jumping (Combat-Movement Integration)
-**Status**: 📋 Pending
+**Status**: ✅ COMPLETED
 
-**Tests to Write First**:
-- [ ] Test downward attack input detection (DOWN + X)
-- [ ] Test downward attack hitbox creation
-- [ ] Test pogo bounce velocity calculation
-- [ ] Test pogo bounce on enemy/object hit
-- [ ] Test pogo chain mechanics (infinite bounces)
-- [ ] Test pogo success window timing
-- [ ] Test pogo vs regular downward dash distinction
+**Tests Completed**:
+- ✅ Test downward attack input detection (DOWN + Z)
+- ✅ Test downward attack hitbox creation
+- ✅ Test pogo bounce velocity calculation
+- ✅ Test pogo bounce on enemy/object hit
+- ✅ Test pogo chain mechanics (infinite bounces)
+- ✅ Test pogo success window timing
+- ✅ Test pogo vs regular downward dash distinction
+- ✅ Test upward attack input detection (UP + Z)
+- ✅ Test attack dimension standardization (side 50x16, vertical 16x50)
+- ✅ All 19 pogo mechanics tests passing, 4 positioning tests passing
 
 **Sub-tasks**:
-- [ ] Add DOWN + X input combination detection
-- [ ] Create downward attack hitbox component
-- [ ] Implement pogo bounce mechanics (reset fall velocity, add upward force)
-- [ ] Add bounce target detection system
-- [ ] Create test enemies/objects for pogo targets
-- [ ] Implement pogo chain potential (infinite bounces with timing)
-- [ ] Add visual/audio feedback for successful pogo
-- [ ] Test pogo integration with existing dash system
-- [ ] Add pogo success window (brief time after attack connects)
-- [ ] User testing for pogo feel and responsiveness
+- ✅ Add DOWN + Z input combination detection in GameScene
+- ✅ Create downward attack hitbox component (16x50 pixels below player)
+- ✅ Implement pogo bounce mechanics (reset fall velocity, add upward force 400px/s)
+- ✅ Add bounce target detection system (enemies with hurtboxes)
+- ✅ Implement pogo chain potential (infinite bounces with timing)
+- ✅ Add enhanced screen shake for successful pogo (10 intensity vs 8 regular)
+- ✅ Test pogo integration with existing dash and combat systems
+- ✅ Add pogo success window (10 frames after attack connects)
+- ✅ Automatic pogo bounce detection when hitting enemies
+- ✅ Add UP + Z upward attack functionality
+- ✅ Standardize attack dimensions: side attacks 50x16, vertical attacks 16x50
+- ✅ Update all sword visuals to match hitbox dimensions
+- ✅ User testing completed and confirmed working
 
 #### 3.2 Enemy System
 **Status**: 📋 Pending

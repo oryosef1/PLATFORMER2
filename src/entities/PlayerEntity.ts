@@ -49,6 +49,10 @@ export class PlayerEntity extends Entity {
   // Player facing direction
   private facingDirection: number = 1; // 1 for right, -1 for left
   
+  // Pogo jumping state
+  private pogoSuccessWindowFrames: number = 0; // frames remaining where pogo bounce is available
+  private pogoCooldownFrames: number = 0; // frames remaining before pogo can be used again
+  
   // Combat state
   private attacking: boolean = false;
   private attackFrames: number = 0;
@@ -103,7 +107,7 @@ export class PlayerEntity extends Entity {
     console.log('[PLAYER] Player entity created with components:', Array.from(this.components.keys()));
   }
 
-  public applyMovement(direction: string, isPressed: boolean, isOnGround: boolean): void {
+  public applyMovement(direction: string, isPressed: boolean, isOnGround: boolean, deltaTime: number = MovementConstants.FIXED_TIMESTEP): void {
     const velocity = this.getComponent('velocity') as VelocityComponent;
     
     // CRITICAL: Don't apply movement when dashing - dash controls velocity completely
@@ -146,8 +150,8 @@ export class PlayerEntity extends Entity {
       maxSpeed *= MovementConstants.SPRINT_SPEED_MULTIPLIER;
     }
     
-    // Apply movement based on direction
-    const accelPerFrame = acceleration * MovementConstants.FIXED_TIMESTEP;
+    // Apply movement based on direction - use actual deltaTime for frame-rate independence
+    const accelPerFrame = acceleration * deltaTime;
     
     if (direction === 'left') {
       velocity.x -= accelPerFrame;
@@ -186,7 +190,7 @@ export class PlayerEntity extends Entity {
     }
   }
 
-  public applyGravity(): void {
+  public applyGravity(deltaTime: number = MovementConstants.FIXED_TIMESTEP): void {
     if (this.isGrounded) {
       // Don't apply gravity when on ground
       return;
@@ -205,7 +209,7 @@ export class PlayerEntity extends Entity {
     }
     
     const velocity = this.getComponent('velocity') as VelocityComponent;
-    const gravityPerFrame = MovementConstants.GRAVITY * MovementConstants.FIXED_TIMESTEP;
+    const gravityPerFrame = MovementConstants.GRAVITY * deltaTime;
     
     velocity.y += gravityPerFrame;
     
@@ -363,6 +367,22 @@ export class PlayerEntity extends Entity {
       this.attackCooldownFrames--;
       if (this.attackCooldownFrames <= 0) {
         console.log('[COMBAT] Attack cooldown expired - can attack again');
+      }
+    }
+    
+    // Update pogo success window
+    if (this.pogoSuccessWindowFrames > 0) {
+      this.pogoSuccessWindowFrames--;
+      if (this.pogoSuccessWindowFrames <= 0) {
+        console.log('[POGO] Pogo success window expired');
+      }
+    }
+    
+    // Update pogo cooldown
+    if (this.pogoCooldownFrames > 0) {
+      this.pogoCooldownFrames--;
+      if (this.pogoCooldownFrames <= 0) {
+        console.log('[POGO] Pogo cooldown expired - can use pogo again');
       }
     }
     
@@ -889,14 +909,14 @@ export class PlayerEntity extends Entity {
     // Create melee hitbox
     const playerHalfWidth = MovementConstants.PLAYER_WIDTH / 2; // Player is 32 pixels wide
     const swordGap = 4; // Small gap between player and sword (matches sword visual)
-    const hitboxWidth = 40; // Make hitbox longer (same as sword visual width for full reach)
-    const hitboxHeight = 16; // Keep height same as sword visual (not too fat)
+    const hitboxWidth = 50; // Side attack width (horizontal)
+    const hitboxHeight = 16; // Side attack height (horizontal)
     const attackDuration = 8; // frames
     const attackDamage = 15;
     
     // Position hitbox to EXACTLY match sword visual positioning
-    // Sword visual uses swordWidth/2 = 20, so we need to match that exactly
-    const swordWidth = 40; // Must match GameScene.ts sword visual width
+    // Sword visual uses swordWidth/2 for horizontal attacks
+    const swordWidth = 50; // Must match GameScene.ts sword visual width for horizontal attacks
     const hitboxX = position.x + (this.facingDirection * (playerHalfWidth + swordGap + swordWidth/2));
     const hitboxY = position.y;
     
@@ -942,15 +962,37 @@ export class PlayerEntity extends Entity {
     const position = this.getComponent<PositionComponent>('position');
     
     if (hitbox && position) {
-      // Recalculate hitbox position to follow player (same as executeAttack)
-      const playerHalfWidth = MovementConstants.PLAYER_WIDTH / 2;
-      const swordGap = 4;
-      const swordWidth = 40; // Must match GameScene.ts sword visual width
-      const hitboxX = position.x + (this.facingDirection * (playerHalfWidth + swordGap + swordWidth/2));
-      const hitboxY = position.y;
-      
-      // Update hitbox position
-      hitbox.updatePosition(hitboxX, hitboxY);
+      if (hitbox.attackType === 'pogo') {
+        // Pogo attack - hitbox below player (same logic as executeDownwardAttack)
+        const playerHalfHeight = MovementConstants.PLAYER_HEIGHT / 2;
+        const swordGap = 4;
+        const hitboxHeight = 50; // Standardized attack height
+        const hitboxX = position.x;
+        const hitboxY = position.y + playerHalfHeight + swordGap + (hitboxHeight / 2);
+        
+        // Update hitbox position
+        hitbox.updatePosition(hitboxX, hitboxY);
+      } else if (hitbox.attackType === 'upward') {
+        // Upward attack - hitbox above player (same logic as executeUpwardAttack)
+        const playerHalfHeight = MovementConstants.PLAYER_HEIGHT / 2;
+        const swordGap = 4;
+        const hitboxHeight = 50; // Standardized attack height
+        const hitboxX = position.x;
+        const hitboxY = position.y - playerHalfHeight - swordGap - (hitboxHeight / 2);
+        
+        // Update hitbox position
+        hitbox.updatePosition(hitboxX, hitboxY);
+      } else {
+        // Regular melee attack - hitbox beside player
+        const playerHalfWidth = MovementConstants.PLAYER_WIDTH / 2;
+        const swordGap = 4;
+        const swordWidth = 50; // Side attack width (horizontal)
+        const hitboxX = position.x + (this.facingDirection * (playerHalfWidth + swordGap + swordWidth/2));
+        const hitboxY = position.y;
+        
+        // Update hitbox position
+        hitbox.updatePosition(hitboxX, hitboxY);
+      }
     }
   }
 
@@ -1004,7 +1046,217 @@ export class PlayerEntity extends Entity {
         attackCooldown: this.attackCooldownFrames,
         canAttack: this.canAttack(),
         facingDirection: this.facingDirection
+      },
+      pogo: {
+        successWindow: this.pogoSuccessWindowFrames,
+        hasActiveWindow: this.hasActivePogoWindow()
       }
     };
+  }
+  
+  // Pogo Jumping Methods
+  
+  public canExecuteDownwardAttack(): boolean {
+    // Pogo attack should be available in air, not interfere with dash, and not be on cooldown
+    const basicRequirements = !this.isGrounded && !this.dashing && this.pogoCooldownFrames <= 0;
+    
+    if (!basicRequirements) {
+      return false;
+    }
+    
+    // Additional check: don't allow pogo if there's a platform directly below
+    // This prevents attacking through ground/platforms
+    return !this.hasPlatformBelow();
+  }
+  
+  private hasPlatformBelow(): boolean {
+    const position = this.getComponent<PositionComponent>('position');
+    if (!position) {
+      return false;
+    }
+    
+    // Check if there's a platform in the pogo attack range below the player
+    // This is a simplified check - in a full game you'd use the collision system
+    const playerHalfHeight = MovementConstants.PLAYER_HEIGHT / 2;
+    const swordGap = 4;
+    const hitboxHeight = 50;
+    const checkDistance = playerHalfHeight + swordGap + hitboxHeight;
+    
+    // For now, assume if we're close to the ground level (Y > 600), there might be a platform
+    // This is a simplified check - you could make this more sophisticated
+    const groundLevel = 684; // Top of ground platform
+    const distanceToGround = groundLevel - (position.y + playerHalfHeight);
+    
+    // If the pogo attack would hit the ground, prevent it
+    if (distanceToGround <= checkDistance) {
+      console.log('[POGO] Cannot pogo - would hit ground/platform');
+      return true;
+    }
+    
+    return false;
+  }
+  
+  public executeDownwardAttack(): boolean {
+    if (!this.canExecuteDownwardAttack()) {
+      return false;
+    }
+    
+    const position = this.getComponent<PositionComponent>('position');
+    if (!position) {
+      return false;
+    }
+    
+    // Create downward-facing hitbox below the player (standardized size)
+    const hitboxWidth = 16; // Standardized attack width
+    const hitboxHeight = 50; // Standardized attack height
+    const attackDuration = MovementConstants.POGO_ATTACK_DURATION_FRAMES; // Faster than normal attack
+    const attackDamage = 15;
+    
+    // Position hitbox directly below player (outside player bounds)
+    // position.y is the player CENTER, so:
+    // - Player center: position.y
+    // - Player bottom: position.y + playerHalfHeight
+    // - Hitbox should start at: player bottom + gap
+    // - Hitbox center: player bottom + gap + hitboxHalfHeight
+    const playerHalfHeight = MovementConstants.PLAYER_HEIGHT / 2; // Player is 48 pixels tall
+    const swordGap = 4; // Small gap between player and sword
+    const hitboxX = position.x;
+    const hitboxY = position.y + playerHalfHeight + swordGap + (hitboxHeight / 2);
+    
+    // Debug positioning calculation
+    console.log(`[POGO_DEBUG] HITBOX: Player center ${position.y.toFixed(1)} -> Hitbox center ${hitboxY.toFixed(1)} (gap: ${((hitboxY - hitboxHeight / 2) - (position.y + playerHalfHeight)).toFixed(1)}px)`);
+    
+    const hitbox = new HitboxComponent({
+      x: hitboxX,
+      y: hitboxY,
+      width: hitboxWidth,
+      height: hitboxHeight,
+      damage: attackDamage,
+      owner: this.id,
+      active: true,
+      type: 'pogo',
+      duration: attackDuration,
+      knockbackForce: 1000,
+      criticalChance: 0.1
+    });
+    
+    // Add hitbox component to player (replaces any existing hitbox)
+    this.addComponent('hitbox', hitbox);
+    
+    // Set attack state (CRITICAL: needed for sword visual)
+    this.attacking = true;
+    this.attackFrames = attackDuration;
+    
+    // Start pogo success window and cooldown
+    this.pogoSuccessWindowFrames = MovementConstants.POGO_SUCCESS_WINDOW_FRAMES;
+    this.pogoCooldownFrames = MovementConstants.POGO_COOLDOWN_FRAMES;
+    
+    console.log(`[POGO] Downward attack executed - hitbox at (${hitboxX.toFixed(1)}, ${hitboxY.toFixed(1)}) size ${hitboxWidth}x${hitboxHeight}, cooldown: ${this.pogoCooldownFrames} frames`);
+    
+    return true;
+  }
+  
+  public executeUpwardAttack(): boolean {
+    if (!this.canAttack()) {
+      return false;
+    }
+    
+    const position = this.getComponent<PositionComponent>('position');
+    if (!position) {
+      return false;
+    }
+    
+    // Create upward-facing hitbox above the player (standardized size)
+    const hitboxWidth = 16; // Standardized attack width
+    const hitboxHeight = 50; // Standardized attack height
+    const attackDuration = 8; // Same as regular attack duration
+    const attackDamage = 15;
+    
+    // Position hitbox directly above player (outside player bounds)
+    // position.y is the player CENTER, so:
+    // - Player center: position.y
+    // - Player top: position.y - playerHalfHeight
+    // - Hitbox should start at: player top - gap
+    // - Hitbox center: player top - gap - hitboxHalfHeight
+    const playerHalfHeight = MovementConstants.PLAYER_HEIGHT / 2; // Player is 48 pixels tall
+    const swordGap = 4; // Small gap between player and sword
+    const hitboxX = position.x;
+    const hitboxY = position.y - playerHalfHeight - swordGap - (hitboxHeight / 2);
+    
+    // Debug positioning calculation
+    console.log(`[UPWARD_DEBUG] HITBOX: Player center ${position.y.toFixed(1)} -> Hitbox center ${hitboxY.toFixed(1)} (gap: ${((position.y - playerHalfHeight) - (hitboxY + hitboxHeight / 2)).toFixed(1)}px)`);
+    
+    const hitbox = new HitboxComponent({
+      x: hitboxX,
+      y: hitboxY,
+      width: hitboxWidth,
+      height: hitboxHeight,
+      damage: attackDamage,
+      owner: this.id,
+      active: true,
+      type: 'upward',
+      duration: attackDuration,
+      knockbackForce: 1000,
+      criticalChance: 0.1
+    });
+    
+    // Add hitbox component to player (replaces any existing hitbox)
+    this.addComponent('hitbox', hitbox);
+    
+    // Set attack state (CRITICAL: needed for sword visual)
+    this.attacking = true;
+    this.attackFrames = attackDuration;
+    
+    console.log(`[UPWARD] Upward attack executed - hitbox at (${hitboxX.toFixed(1)}, ${hitboxY.toFixed(1)}) size ${hitboxWidth}x${hitboxHeight}`);
+    
+    return true;
+  }
+  
+  public executePogoBounce(): boolean {
+    if (!this.hasActivePogoWindow()) {
+      return false;
+    }
+    
+    const velocity = this.getComponent<VelocityComponent>('velocity');
+    if (!velocity) {
+      return false;
+    }
+    
+    // Reset fall velocity and add upward bounce force
+    velocity.y = -MovementConstants.POGO_BOUNCE_FORCE;
+    
+    // Clear pogo window after successful bounce
+    this.pogoSuccessWindowFrames = 0;
+    
+    console.log(`[POGO] Bounce executed with upward velocity: ${-MovementConstants.POGO_BOUNCE_FORCE}`);
+    
+    return true;
+  }
+  
+  public restoreAbilitiesOnPogo(): void {
+    // Restore double jump
+    this.hasDoubleJump = true;
+    
+    // Restore dash (reset cooldown)
+    this.dashCooldownFrames = 0;
+    
+    // Reset pogo cooldown for chaining
+    this.pogoCooldownFrames = 0;
+    
+    // Reset attack cooldown
+    this.attackCooldownFrames = 0;
+    
+    console.log('[POGO] All abilities restored - double jump, dash, attacks, and pogo chaining available!');
+  }
+  
+  public isValidPogoTarget(target: Entity): boolean {
+    // For now, consider any entity with a hurtbox as a valid pogo target
+    // This includes enemies but excludes platforms
+    const targetHurtbox = target.getComponent('hurtbox');
+    return targetHurtbox !== null;
+  }
+  
+  public hasActivePogoWindow(): boolean {
+    return this.pogoSuccessWindowFrames > 0;
   }
 }
