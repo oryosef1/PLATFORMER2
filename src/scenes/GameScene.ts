@@ -37,6 +37,10 @@ export class GameScene extends Phaser.Scene {
   private staminaBarBackground!: Phaser.GameObjects.Rectangle;
   private staminaBarFill!: Phaser.GameObjects.Rectangle;
   private staminaBarText!: Phaser.GameObjects.Text;
+  
+  // Screen shake system
+  private screenShakeIntensity: number = 0;
+  private screenShakeDuration: number = 0;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -421,6 +425,9 @@ export class GameScene extends Phaser.Scene {
       console.log(`[COMBAT] Processed ${combatResults.length} combat interactions`);
       for (const result of combatResults) {
         console.log(`[COMBAT] ${result.attacker.id} dealt ${result.damage} damage to ${result.target.id}`);
+        
+        // Trigger screen shake on successful hits
+        this.startScreenShake(8, 12); // 8 intensity, 12 frames duration
       }
     }
     
@@ -454,6 +461,9 @@ export class GameScene extends Phaser.Scene {
             const knockbackDirection = enemyPos.x > playerPos.x ? -1 : 1; // Push away from enemy
             if (this.playerEntity.takeDamage(10, knockbackDirection)) {
               console.log(`[COMBAT] Player hit by enemy - damage and knockback applied (direction: ${knockbackDirection})`);
+              
+              // Trigger screen shake when player gets hit (stronger than when hitting enemies)
+              this.startScreenShake(12, 15); // 12 intensity, 15 frames duration
             }
           } else {
             console.log(`[COMBAT] Player touching enemy but invincible - no damage`);
@@ -630,6 +640,9 @@ export class GameScene extends Phaser.Scene {
     const allEntities = [this.playerEntity, this.testEnemyEntity, ...this.platformEntities];
     this.debugCollision.update(allEntities, collisions, 64);
     
+    // Update screen shake
+    this.updateScreenShake();
+    
     console.log(`[SYNC] ECS pos: (${finalPosition.x.toFixed(1)}, ${finalPosition.y.toFixed(1)}) vel: (${finalVelocity.x.toFixed(1)}, ${finalVelocity.y.toFixed(1)})`);
   }
   
@@ -669,6 +682,16 @@ export class GameScene extends Phaser.Scene {
       // Position sword visual
       this.swordVisual.x = swordCenterX;
       this.swordVisual.y = swordCenterY;
+      
+      // Get hitbox position for comparison
+      const playerHitbox = this.playerEntity.getComponent('hitbox');
+      if (playerHitbox) {
+        const hitboxAABB = playerHitbox.getAABB();
+        console.log(`[SWORD_DEBUG] Player at (${playerPosition.x.toFixed(1)}, ${playerPosition.y.toFixed(1)})`);
+        console.log(`[SWORD_DEBUG] Sword visual at (${swordCenterX.toFixed(1)}, ${swordCenterY.toFixed(1)})`);
+        console.log(`[SWORD_DEBUG] Hitbox at (${hitboxAABB.x.toFixed(1)}, ${hitboxAABB.y.toFixed(1)}) size ${hitboxAABB.width}x${hitboxAABB.height}`);
+        console.log(`[SWORD_DEBUG] Facing: ${facingDirection > 0 ? 'RIGHT' : 'LEFT'}`);
+      }
       
       // Optional: Add visual effects
       this.swordVisual.setFillStyle(0xffffff); // White color for sword swing
@@ -723,8 +746,8 @@ export class GameScene extends Phaser.Scene {
     this.playerHitboxDebug.setDepth(300);
     this.playerHitboxDebug.setVisible(false); // Only show when attacking
     
-    // Enemy hurtbox (yellow outline)
-    this.enemyHurtboxDebug = this.add.rectangle(0, 0, 32, 32, 0xffff00, 0);
+    // Enemy hurtbox (yellow outline) - updated to match new enemy size
+    this.enemyHurtboxDebug = this.add.rectangle(0, 0, 64, 48, 0xffff00, 0);
     this.enemyHurtboxDebug.setStrokeStyle(2, 0xffff00);
     this.enemyHurtboxDebug.setDepth(300);
     this.enemyHurtboxDebug.setVisible(this.debugModeEnabled);
@@ -774,6 +797,33 @@ export class GameScene extends Phaser.Scene {
     } else {
       // Normal orange color
       this.testEnemyVisual.setFillStyle(0xff6b35);
+    }
+  }
+  
+  private startScreenShake(intensity: number, duration: number): void {
+    this.screenShakeIntensity = intensity;
+    this.screenShakeDuration = duration;
+    console.log(`[SCREEN_SHAKE] Started - intensity: ${intensity}, duration: ${duration} frames`);
+  }
+  
+  private updateScreenShake(): void {
+    if (this.screenShakeDuration > 0) {
+      // Calculate shake offset with random direction
+      const shakeX = (Math.random() - 0.5) * this.screenShakeIntensity;
+      const shakeY = (Math.random() - 0.5) * this.screenShakeIntensity;
+      
+      // Apply shake to camera
+      this.cameras.main.setScroll(shakeX, shakeY);
+      
+      // Decrease duration and intensity over time
+      this.screenShakeDuration--;
+      this.screenShakeIntensity *= 0.9; // Gradually reduce intensity
+      
+      if (this.screenShakeDuration <= 0) {
+        // Reset camera position when shake ends
+        this.cameras.main.setScroll(0, 0);
+        console.log(`[SCREEN_SHAKE] Ended`);
+      }
     }
   }
 }

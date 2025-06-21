@@ -94,10 +94,19 @@
   - ✅ All 204 tests passing (32 dash/sprint tests + 172 existing)
   - ✅ User testing completed and confirmed working
 
-## Current Work
-- Phase 2.4 Advanced Movement completed successfully with Hollow Knight-style dash mechanics and critical double jump bug fix
-- Pogo jumping correctly identified as combat mechanic and moved to Phase 3.1.1
-- Ready to begin Phase 3.1: Combat System Foundation (hitbox/hurtbox system, melee attacks)
+## Current Work  
+- ✅ **Phase 3.1 Combat System Foundation - COMPLETED**
+  - ✅ Hitbox/Hurtbox system with proper collision detection
+  - ✅ Melee attack system with 40x16 hitbox (matches sword visual)
+  - ✅ Damage calculation (15 damage per hit)
+  - ✅ Strong knockback system (1000 force for dramatic impact)
+  - ✅ Enemy invincibility frames (15 frames)
+  - ✅ Screen shake on enemy hit (8 intensity, 12 frames duration)
+  - ✅ Screen shake on player hit (12 intensity, 15 frames duration - stronger feedback)
+  - ✅ Enemy damage flash visual feedback
+  - ✅ Player invincibility flash visual feedback
+  - ✅ All combat features working and tested
+- Ready to begin Phase 3.1.1: Pogo Jumping (Combat-Movement Integration)
 
 ## Important Learnings - WSL2 Development & Vite Setup
 1. **WSL2 Networking Issue**: WSL2 uses a virtual network adapter that doesn't always communicate well with Windows host

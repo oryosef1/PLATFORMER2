@@ -889,13 +889,15 @@ export class PlayerEntity extends Entity {
     // Create melee hitbox
     const playerHalfWidth = MovementConstants.PLAYER_WIDTH / 2; // Player is 32 pixels wide
     const swordGap = 4; // Small gap between player and sword (matches sword visual)
-    const hitboxWidth = 32;
-    const hitboxHeight = 16;
+    const hitboxWidth = 40; // Make hitbox longer (same as sword visual width for full reach)
+    const hitboxHeight = 16; // Keep height same as sword visual (not too fat)
     const attackDuration = 8; // frames
     const attackDamage = 15;
     
-    // Position hitbox right outside player boundary (matches sword visual)
-    const hitboxX = position.x + (this.facingDirection * (playerHalfWidth + swordGap));
+    // Position hitbox to EXACTLY match sword visual positioning
+    // Sword visual uses swordWidth/2 = 20, so we need to match that exactly
+    const swordWidth = 40; // Must match GameScene.ts sword visual width
+    const hitboxX = position.x + (this.facingDirection * (playerHalfWidth + swordGap + swordWidth/2));
     const hitboxY = position.y;
     
     const hitbox = new HitboxComponent({
@@ -908,7 +910,7 @@ export class PlayerEntity extends Entity {
       active: true,
       type: 'melee',
       duration: attackDuration,
-      knockbackForce: 75,
+      knockbackForce: 1000, // Very strong knockback for dramatic combat feel
       criticalChance: 0.1
     });
     
@@ -940,10 +942,11 @@ export class PlayerEntity extends Entity {
     const position = this.getComponent<PositionComponent>('position');
     
     if (hitbox && position) {
-      // Recalculate hitbox position to follow player
+      // Recalculate hitbox position to follow player (same as executeAttack)
       const playerHalfWidth = MovementConstants.PLAYER_WIDTH / 2;
       const swordGap = 4;
-      const hitboxX = position.x + (this.facingDirection * (playerHalfWidth + swordGap));
+      const swordWidth = 40; // Must match GameScene.ts sword visual width
+      const hitboxX = position.x + (this.facingDirection * (playerHalfWidth + swordGap + swordWidth/2));
       const hitboxY = position.y;
       
       // Update hitbox position

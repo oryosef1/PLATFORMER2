@@ -60,9 +60,10 @@ export class HitboxComponent implements IComponent {
   }
 
   public getAABB(): { x: number; y: number; width: number; height: number } {
+    // Convert from center-based coordinates (Phaser) to top-left coordinates (AABB collision)
     return {
-      x: this.x,
-      y: this.y,
+      x: this.x - this.width / 2,
+      y: this.y - this.height / 2,
       width: this.width,
       height: this.height
     };

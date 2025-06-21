@@ -187,22 +187,23 @@
 **Goal**: Engaging combat with varied enemy types
 
 #### 3.1 Combat System Foundation
-**Status**: 📋 Pending
+**Status**: ✅ COMPLETED (Phase 3.1 Combat Features)
 
-**Tests to Write First**:
-- [ ] Test hitbox/hurtbox creation
-- [ ] Test damage calculation
-- [ ] Test knockback application
-- [ ] Test invincibility frames
-- [ ] Test melee attack hitboxes
+**Tests Completed**:
+- ✅ Hitbox/hurtbox creation and positioning
+- ✅ Damage calculation and application  
+- ✅ Knockback application with strong force
+- ✅ Invincibility frames for enemies
+- ✅ Melee attack hitboxes with proper sizing
 
 **Sub-tasks**:
-- [ ] Create Hitbox/Hurtbox components
-- [ ] Implement melee attack system
-- [ ] Add damage calculation
-- [ ] Create knockback system
-- [ ] Add invincibility frames
-- [ ] Implement screen shake on hit
+- ✅ Create Hitbox/Hurtbox components
+- ✅ Implement melee attack system
+- ✅ Add damage calculation
+- ✅ Create knockback system (1000 force)
+- ✅ Add invincibility frames
+- ✅ Implement screen shake on enemy hit (8 intensity, 12 frames)
+- ✅ Implement screen shake on player hit (12 intensity, 15 frames - stronger)
 
 #### 3.1.1 Pogo Jumping (Combat-Movement Integration)
 **Status**: 📋 Pending
@@ -409,3 +410,4 @@ Note: Pogo jumping moved to Phase 3.1.1 as it requires combat system infrastruct
 - ✅ Phase 2.2: Enhanced Jumping System (108 tests passing total)
 - ✅ Phase 2.3: Collision System with Critical Architecture Fixes (142 tests passing total)
 - ✅ Phase 2.4: Advanced Movement with Dash & Sprint Mechanics (204 tests passing total)
+- ✅ Phase 3.1: Combat System Foundation with Screen Shake (All combat features working)

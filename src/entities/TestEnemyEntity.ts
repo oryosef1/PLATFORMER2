@@ -33,8 +33,10 @@ export class TestEnemyEntity extends Entity {
     ));
     
     // Add combat component (hurtbox for taking damage)
+    // Hurtbox should exactly match the visual rectangle position
+    // Since Phaser rectangles are centered, we need to match that
     this.addComponent('hurtbox', new HurtboxComponent({
-      x: x,
+      x: x, // Use same position as visual (Phaser rectangles are centered)
       y: y,
       width: width,
       height: height,
@@ -68,6 +70,13 @@ export class TestEnemyEntity extends Entity {
   public update(deltaTime: number): void {
     // Update visual position
     this.updateVisualPosition();
+    
+    // Update hurtbox position to match entity position exactly
+    const position = this.getComponent('position') as PositionComponent;
+    const hurtbox = this.getComponent<HurtboxComponent>('hurtbox');
+    if (position && hurtbox) {
+      hurtbox.updatePosition(position.x, position.y);
+    }
     
     // Update damage flash effect
     if (this.damageFlashFrames > 0) {
