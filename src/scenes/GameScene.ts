@@ -113,7 +113,7 @@ export class GameScene extends Phaser.Scene {
     this.swordVisual.setVisible(false); // Hidden by default
     
     // Create test enemy for combat testing
-    this.testEnemyEntity = new TestEnemyEntity(600, 660, 32, 32); // On ground platform, away from walls
+    this.testEnemyEntity = new TestEnemyEntity(600, 660, 64, 48); // On ground platform, away from walls - larger for easier targeting
     this.collisionSystem.addEntity(this.testEnemyEntity); // Add to collision system so player can interact with it
     this.combatSystem.addEntity(this.testEnemyEntity);
     console.log('[GAME] Test enemy created and added to collision and combat systems');
@@ -654,21 +654,21 @@ export class GameScene extends Phaser.Scene {
       // Show sword visual during attack
       this.swordVisual.setVisible(true);
       
-      // Position sword to match hitbox exactly
+      // Position sword visual properly outside the player
       const facingDirection = this.playerEntity.getFacingDirection();
       const playerHalfWidth = 32 / 2; // Player is 32 pixels wide
       const swordGap = 4; // Small gap between player and sword
       const swordWidth = 40; // Sword dimensions
       const swordHeight = 16;
       
-      // Calculate hitbox center position (this is where the hitbox rectangle is centered)
-      const hitboxCenterX = playerPosition.x + (facingDirection * (playerHalfWidth + swordGap));
-      const hitboxCenterY = playerPosition.y;
+      // Calculate where the sword visual should be positioned
+      // We want the sword to appear next to the player, not overlapping
+      const swordCenterX = playerPosition.x + (facingDirection * (playerHalfWidth + swordGap + swordWidth/2));
+      const swordCenterY = playerPosition.y;
       
-      // Position sword visual at the same center point as hitbox
-      // (Phaser rectangles are positioned by their center by default)
-      this.swordVisual.x = hitboxCenterX;
-      this.swordVisual.y = hitboxCenterY;
+      // Position sword visual
+      this.swordVisual.x = swordCenterX;
+      this.swordVisual.y = swordCenterY;
       
       // Optional: Add visual effects
       this.swordVisual.setFillStyle(0xffffff); // White color for sword swing
