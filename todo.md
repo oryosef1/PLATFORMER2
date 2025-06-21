@@ -235,23 +235,27 @@
 - ✅ Update all sword visuals to match hitbox dimensions
 - ✅ User testing completed and confirmed working
 
-#### 3.2 Enemy System
-**Status**: 📋 Pending
+#### 3.2 Enemy System ✅
+**Status**: ✅ COMPLETED with comprehensive TDD implementation
 
-**Tests to Write First**:
-- [ ] Test enemy factory creation
-- [ ] Test walker enemy AI
-- [ ] Test enemy state transitions
-- [ ] Test enemy-player collision
-- [ ] Test enemy health system
+**Tests Completed**:
+- ✅ Test enemy factory creation - 4 tests
+- ✅ Test walker enemy AI with full state machine - 7 tests  
+- ✅ Test enemy state transitions and management - 4 tests
+- ✅ Test enemy-player collision detection - 4 tests
+- ✅ Test enemy health system with invincibility frames - 7 tests
+- ✅ All 26 enemy system tests passing with comprehensive coverage
 
 **Sub-tasks**:
-- [ ] Create enemy factory pattern
-- [ ] Implement walker enemy
-- [ ] Add basic AI state machine
-- [ ] Create enemy-player collision
-- [ ] Add enemy health system
-- [ ] Implement enemy death
+- ✅ Create WalkerEnemyEntity with ECS integration
+- ✅ Implement walker AI with state machine (idle, walking, chasing, hurt, dead)
+- ✅ Add AI patrol behavior with boundaries and detection
+- ✅ Create enemy-player collision with proper damage handling
+- ✅ Add enemy health system with death mechanics
+- ✅ Implement proper enemy death with complete scene removal
+- ✅ Fix double damage bug with hitbox tracking system
+- ✅ Fix debug visualization cleanup on enemy death
+- ✅ Add combat system integration with invincibility frames
 
 #### 3.3 Additional Enemy Types
 **Status**: 📋 Pending
@@ -404,8 +408,7 @@
 - **Performance Tests**: Ensure 60fps with 100+ entities
 
 ## Current Priority
-Focus on Phase 3.1: Combat System Foundation (hitbox/hurtbox system, melee attacks)
-Note: Pogo jumping moved to Phase 3.1.1 as it requires combat system infrastructure
+Focus on Phase 3.3: Additional Enemy Types (flyer, charger, spitter, shield enemies)
 
 ## Completed Phases
 - ✅ Phase 1.1: Basic Game Setup
@@ -417,3 +420,5 @@ Note: Pogo jumping moved to Phase 3.1.1 as it requires combat system infrastruct
 - ✅ Phase 2.3: Collision System with Critical Architecture Fixes (142 tests passing total)
 - ✅ Phase 2.4: Advanced Movement with Dash & Sprint Mechanics (204 tests passing total)
 - ✅ Phase 3.1: Combat System Foundation with Screen Shake (All combat features working)
+- ✅ Phase 3.1.1: Pogo Jumping with Attack Standardization (23 pogo/positioning tests passing)
+- ✅ Phase 3.2: Enemy System with Walker AI (26 enemy system tests passing, 275 tests total)

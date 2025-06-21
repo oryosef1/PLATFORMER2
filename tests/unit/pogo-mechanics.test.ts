@@ -1,16 +1,16 @@
 import { describe, test, expect, beforeEach } from 'vitest';
 import { PlayerEntity } from '../../src/entities/PlayerEntity';
-import { TestEnemyEntity } from '../../src/entities/TestEnemyEntity';
+import { WalkerEnemyEntity } from '../../src/entities/WalkerEnemyEntity';
 import { MovementConstants } from '../../src/physics/MovementConstants';
 
 describe('Phase 3.1.1: Pogo Jumping Mechanics Tests', () => {
   let playerEntity: PlayerEntity;
-  let enemyEntity: TestEnemyEntity;
+  let enemyEntity: WalkerEnemyEntity;
 
   beforeEach(() => {
     // Create player and enemy for pogo testing
     playerEntity = new PlayerEntity(100, 200);
-    enemyEntity = new TestEnemyEntity(200, 300, 64, 48);
+    enemyEntity = new WalkerEnemyEntity(200, 300);
     
     // Reset any state that might affect tests
     playerEntity.setGroundState(false); // Start in air for pogo scenarios

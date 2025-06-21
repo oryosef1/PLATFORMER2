@@ -2,8 +2,8 @@
 
 ## Current Status
 **Date**: 2025-06-21
-**Phase**: Phase 3.1.1 Pogo Jumping - COMPLETED
-**Last Updated**: Complete pogo jumping system with upward attacks and standardized attack dimensions (side 50x16, vertical 16x50), ready for Phase 3.2
+**Phase**: Phase 3.2 Enemy System - COMPLETED
+**Last Updated**: Phase 3.2 completed with comprehensive TDD enemy system implementation - ready for Phase 3.3
 
 ## Completed Features
 - ✅ Project initialization with Vite + TypeScript + Phaser 3
@@ -48,10 +48,12 @@
   - ✅ All 89 tests passing (22 PlayerEntity tests + 67 existing)
   - ✅ User testing completed and confirmed working
 - ✅ **Phase 2.2 Enhanced Jumping System - COMPLETED**
-  - ✅ Variable jump height system (hold UP for 12 frames: 300-500 px/s scaling)
+  - ✅ Variable jump height system (hold Z for 8 frames: 280-460 px/s with square root scaling)
+  - ✅ **ENHANCED**: Improved jump responsiveness with square root scaling for short taps
+  - ✅ **ENHANCED**: Jump cancellation system cuts velocity in half on key release
   - ✅ Coyote time system (6-frame grace period after leaving ground)
   - ✅ Jump buffering system (10-frame input window for smooth controls)
-  - ✅ Double jump mechanics (UP+UP instead of UP+SPACE)
+  - ✅ Double jump mechanics (Z+Z instead of UP+SPACE)
   - ✅ Jump state management and cancellation system
   - ✅ Input timing bug fixed (InputManager update order corrected)
   - ✅ Coyote time small jump issue resolved
@@ -84,7 +86,7 @@
   - ✅ Wall jump control lockout (4 frames) and cooldown system (8 frames)
   - ✅ **Hollow Knight-style dash mechanics**: Facing-based dash direction (not input-based)
   - ✅ Dash system with cooldown (60 frames), duration (8 frames), and invincibility (6 frames)
-  - ✅ Downward dash support (X+DOWN for downward dash like Dashmaster charm)
+  - ✅ ~~Downward dash support~~ (REMOVED: downward dashing eliminated for cleaner mechanics)
   - ✅ Sprint system with stamina management (300 frames max, drain rate 2/frame, regen 1/frame)
   - ✅ Sprint speed and acceleration multipliers (1.5x speed, 1.3x acceleration)
   - ✅ Dash and sprint integration (can dash while sprinting, sprint continues after dash)
@@ -107,21 +109,39 @@
   - ✅ Player invincibility flash visual feedback
   - ✅ All combat features working and tested
 - ✅ **Phase 3.1.1 Pogo Jumping - COMPLETED**
-  - ✅ Pogo jumping mechanics with DOWN + Z input combination
+  - ✅ Pogo jumping mechanics with DOWN + X input combination (updated controls)
   - ✅ Downward attack hitbox creation positioned below player (16x50 dimensions)
-  - ✅ Upward attack functionality with UP + Z input combination (16x50 dimensions)
+  - ✅ Upward attack functionality with UP + X input combination (16x50 dimensions)
   - ✅ Regular side attacks with proper dimensions (50x16 for horizontal reach)
   - ✅ Attack dimension standardization: side attacks 50x16, vertical attacks 16x50
-  - ✅ Pogo bounce system with 400 px/s upward velocity
+  - ✅ Pogo bounce system with 380 px/s upward velocity (reduced for better physics)
   - ✅ 10-frame success window after downward attack
   - ✅ Automatic pogo bounce on enemy hit detection
   - ✅ Pogo chain mechanics (infinite bounces with timing)
   - ✅ Integration with existing combat and movement systems
   - ✅ Enhanced screen shake for pogo hits (10 intensity vs 8 for regular hits)
   - ✅ Pogo target detection (works on enemies, not platforms)
+  - ✅ **ENHANCED**: Smart sword rendering - renders behind platforms when intersecting ground
+  - ✅ **ENHANCED**: Hollow Knight-style pogo mechanics allow ground-level attacks
   - ✅ All sword visuals updated to match hitbox dimensions
   - ✅ All 23 pogo/positioning tests passing (249 total tests)
-- Ready to begin Phase 3.2: Enemy System
+- ✅ **Phase 3.1.1 Post-Completion Refinements - COMPLETED**
+  - ✅ **Control Scheme Update**: Z for jump, X for attack, C for dash, D for debug hitboxes
+  - ✅ **Downward Dash Removal**: Eliminated downward dashing for cleaner mechanics
+  - ✅ **Jump Control Enhancement**: More responsive variable jump height system
+  - ✅ **Physics Improvements**: Gravity increased to 1400, jumping forces rebalanced
+  - ✅ All 249 tests passing with updated expectations
+- ✅ **Phase 3.2 Enemy System - COMPLETED**
+  - ✅ **EnemyAIComponent**: State machine with idle/walking/chasing/hurt/dead states
+  - ✅ **WalkerEnemyEntity**: Full ECS integration with 24x32 collision, 30 HP, 15 damage
+  - ✅ **EnemyAISystem**: Patrol behavior with 120px range, 200px detection, state management
+  - ✅ **Walker AI Behaviors**: Idle (2s) → Walking (patrol) → Chasing (when player detected)
+  - ✅ **Enemy Combat Integration**: Damage dealing, invincibility frames, knockback
+  - ✅ **Death System**: Complete enemy removal from scene and all systems
+  - ✅ **Combat Bug Fixes**: Fixed double/multiple damage with hitbox tracking system
+  - ✅ **Debug Visualization**: Proper hurtbox cleanup when enemies die
+  - ✅ **Test Coverage**: 26 comprehensive enemy system tests (275 total tests)
+- Ready to begin Phase 3.3: Additional Enemy Types
 
 ## Important Learnings - WSL2 Development & Vite Setup
 1. **WSL2 Networking Issue**: WSL2 uses a virtual network adapter that doesn't always communicate well with Windows host
@@ -164,7 +184,7 @@ PLATFORMER/
 - **Dev**: vite, typescript, vitest, @playwright/test, @types/node, jsdom, canvas, @vitest/ui
 
 ## Test Coverage
-- **249 tests passing** - comprehensive coverage of Phases 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, 3.1, and 3.1.1
+- **275 tests passing** - comprehensive coverage of Phases 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, 3.1, 3.1.1, and 3.2
 - **Game Logic Tests**: 13 tests covering dimensions, colors, positions, physics
 - **FPS Tests**: 8 tests covering calculation logic, timing, and performance
 - **ECS Component Tests**: 15 tests covering PositionComponent and VelocityComponent
@@ -177,6 +197,7 @@ PLATFORMER/
 - **Dash/Sprint Tests**: 32 tests covering Hollow Knight-style dash mechanics and sprint stamina management
 - **Pogo Mechanics Tests**: 19 tests covering downward attacks, bounce mechanics, and chaining
 - **Pogo Positioning Tests**: 4 tests covering hitbox positioning and visual synchronization
+- **Enemy System Tests**: 26 tests covering AI state machine, combat integration, and death mechanics
 - **Test Strategy**: Simplified logic tests instead of complex Phaser mocking
 
 ## Key Decisions Made
@@ -229,10 +250,12 @@ None currently.
 - Emphasizing TDD approach with tests before features
 - Visual feedback priority for immediate development feedback
 - To run dev server: Use Windows PowerShell with `npm run dev`
+- **Current Controls**: Z (jump), X (attack), C (dash), D (debug hitboxes), Arrow keys (movement)
 - Game features working: 
   - Red rectangle player with ECS-based movement
   - Advanced movement physics (acceleration, friction, air control)
-  - Gravity system with terminal velocity
+  - Enhanced gravity system with terminal velocity (1400 px/s²)
+  - Responsive variable jump height system with square root scaling
   - Proper collision detection and ground state management
   - Green platforms for collision testing
   - Debug info showing position, velocity, and ground state
@@ -241,6 +264,8 @@ None currently.
   - Input system with extensive console debugging
   - Real-time input state display in game
   - 10-frame input buffering for precise controls
+  - Full combat system with pogo jumping mechanics
+  - Smart visual rendering for sword/hitbox interactions
 
 ## Console Debugging Features
 - Key press/release detection with frame numbers
@@ -383,3 +408,78 @@ None currently.
 - **Variable jump height preserved**: Can still hold UP for higher jumps without consuming double jump
 - **Double jump requires separate press**: Must release and press UP again for double jump
 - **All 204 tests passing**: No regressions, improved input reliability
+
+### Phase 3.1.1 Post-Completion Refinements
+**Problem**: User feedback requesting control scheme changes and improved jump responsiveness
+1. **Downward Dash Removal**: User wanted downward dashing removed for cleaner mechanics
+2. **Jump Control Issues**: Jump height not responsive enough to quick taps
+3. **Control Scheme**: User wanted Z/X/C/D control scheme instead of arrow keys
+
+**Root Cause Analysis**: 
+- Downward dash functionality was complicating the control scheme unnecessarily
+- Jump hold time (12 frames) and linear scaling made short taps feel unresponsive
+- Control scheme using arrow keys for actions felt awkward compared to ZXCD layout
+
+**Solution Strategy**: **User-Driven Improvements**
+- **Dash Simplification**: Removed downward dash, kept only horizontal facing-direction dash
+- **Jump Responsiveness**: Reduced hold frames (12→8) and implemented square root scaling
+- **Jump Cancellation**: Added velocity cut (50%) on early key release for precise control
+- **Control Remapping**: Z for jump, X for attack, C for dash, D for debug hitboxes
+- **Physics Refinement**: Increased gravity (1400) and rebalanced all jumping forces
+
+**Technical Implementation**:
+1. **Removed downward dash logic** from GameScene.ts (lines 362-364)
+2. **Enhanced jump scaling** with Math.sqrt() for more responsive short taps (PlayerEntity.ts:589-590)
+3. **Added jump cancellation** that cuts velocity in half on key release (PlayerEntity.ts:608-610)
+4. **Updated control scheme** throughout GameScene.ts (lines 171-174)
+5. **Rebalanced physics constants** in MovementConstants.ts (gravity, jump forces)
+6. **Updated test expectations** to match new jump behavior
+
+**Result**: 
+- **Cleaner dash mechanics**: Only horizontal dashing eliminates control complexity
+- **Highly responsive jumps**: Short taps produce appropriately small jumps, long holds reach full height
+- **Intuitive controls**: ZXCD layout feels natural and reduces hand movement
+- **Better physics feel**: Stronger gravity with rebalanced forces creates snappier platforming
+- **All 249 tests passing**: Updated tests maintain comprehensive coverage with new behavior
+
+### Phase 3.2 Enemy System Implementation Success
+**Problem**: Need comprehensive enemy system with AI, combat integration, and proper death handling
+- Required full TDD approach starting with 26 tests before any implementation
+- Needed AI state machine for walker enemy behavior
+- Required integration with existing combat and collision systems
+- Needed proper enemy death and cleanup systems
+
+**Root Cause Analysis**: 
+- No existing enemy infrastructure or patterns
+- Combat system needed expansion for enemy damage handling
+- Required new ECS components for AI behavior
+- Scene management needed enemy lifecycle handling
+
+**Solution Strategy**: **Comprehensive TDD Implementation**
+- **Test-First Development**: Wrote all 26 tests before any enemy code
+- **State Machine AI**: Implemented idle/walking/chasing/hurt/dead states
+- **ECS Integration**: Full entity-component-system architecture
+- **Combat Enhancement**: Extended combat system for enemy interactions
+- **Proper Cleanup**: Complete enemy removal from all systems
+
+**Technical Implementation**:
+1. **EnemyAIComponent**: State machine with patrol distance, speeds, detection range
+2. **WalkerEnemyEntity**: 24x32 collision, 30 HP, integrated with all ECS systems
+3. **EnemyAISystem**: Handles all AI logic, state transitions, player detection
+4. **Combat Integration**: Enemy damage, invincibility frames, knockback
+5. **Death System**: Complete removal from scene, systems, and visual cleanup
+6. **Bug Fixes**: Double damage prevention with hitbox tracking system
+
+**Critical Fixes During Implementation**:
+- **Double Damage Bug**: Added `hitTargets: Set<string>` to prevent multiple hits per attack
+- **Enemy Death Cleanup**: Enemies completely disappear instead of turning gray
+- **Debug Visualization**: Hurtbox debug properly hides when no enemies exist
+- **AI State Synchronization**: Health changes properly sync with AI state transitions
+
+**Result**: 
+- **Complete Enemy System**: Walker enemies with full AI behavior working perfectly
+- **Flawless Combat Integration**: Enemies take damage, show invincibility, die properly
+- **Perfect Death Handling**: Dead enemies completely removed from scene and systems
+- **No Combat Exploits**: Each attack can only hit each enemy once
+- **All 275 tests passing**: 26 new enemy tests + all existing tests maintained
+- **Ready for Enemy Expansion**: Foundation set for additional enemy types in Phase 3.3

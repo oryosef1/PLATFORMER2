@@ -585,9 +585,11 @@ export class PlayerEntity extends Entity {
       this.jumpHoldFrames++;
       
       // Calculate jump velocity based on how long we've been holding
+      // Use square root scaling to make short taps more powerful (1 frame = ~35% power instead of ~12%)
       const holdProgress = this.jumpHoldFrames / MovementConstants.JUMP_HOLD_FRAMES;
+      const scaledProgress = Math.sqrt(holdProgress); // Square root scaling for more responsive short taps
       const targetVelocity = MovementConstants.MIN_JUMP_VELOCITY + 
-        (MovementConstants.MAX_JUMP_VELOCITY - MovementConstants.MIN_JUMP_VELOCITY) * holdProgress;
+        (MovementConstants.MAX_JUMP_VELOCITY - MovementConstants.MIN_JUMP_VELOCITY) * scaledProgress;
       
       // Only increase velocity if we're still moving upward (negative velocity)
       if (velocity.y < 0) {
@@ -599,9 +601,16 @@ export class PlayerEntity extends Entity {
         console.log('[PLAYER] Jump ended - falling');
       }
     } else if (!isHolding) {
-      // Key released - end jump state
+      // Key released - end jump state and apply jump cancellation
       this.isJumpingState = false;
-      console.log('[PLAYER] Jump ended - key released');
+      
+      // Cut upward velocity in half for more responsive jump cancellation
+      if (velocity.y < 0) {
+        velocity.y *= 0.5;
+        console.log(`[PLAYER] Jump cancelled - velocity cut to ${velocity.y.toFixed(2)}`);
+      } else {
+        console.log('[PLAYER] Jump ended - key released');
+      }
     } else {
       // Max hold time reached
       this.isJumpingState = false;
@@ -1058,44 +1067,13 @@ export class PlayerEntity extends Entity {
   
   public canExecuteDownwardAttack(): boolean {
     // Pogo attack should be available in air, not interfere with dash, and not be on cooldown
+    // Following Hollow Knight mechanics: pogo works on enemies/spikes regardless of ground proximity
     const basicRequirements = !this.isGrounded && !this.dashing && this.pogoCooldownFrames <= 0;
     
-    if (!basicRequirements) {
-      return false;
-    }
-    
-    // Additional check: don't allow pogo if there's a platform directly below
-    // This prevents attacking through ground/platforms
-    return !this.hasPlatformBelow();
+    return basicRequirements;
   }
   
-  private hasPlatformBelow(): boolean {
-    const position = this.getComponent<PositionComponent>('position');
-    if (!position) {
-      return false;
-    }
-    
-    // Check if there's a platform in the pogo attack range below the player
-    // This is a simplified check - in a full game you'd use the collision system
-    const playerHalfHeight = MovementConstants.PLAYER_HEIGHT / 2;
-    const swordGap = 4;
-    const hitboxHeight = 50;
-    const checkDistance = playerHalfHeight + swordGap + hitboxHeight;
-    
-    // For now, assume if we're close to the ground level (Y > 600), there might be a platform
-    // This is a simplified check - you could make this more sophisticated
-    const groundLevel = 684; // Top of ground platform
-    const distanceToGround = groundLevel - (position.y + playerHalfHeight);
-    
-    // If the pogo attack would hit the ground, prevent it
-    if (distanceToGround <= checkDistance) {
-      console.log('[POGO] Cannot pogo - would hit ground/platform');
-      return true;
-    }
-    
-    return false;
-  }
-  
+
   public executeDownwardAttack(): boolean {
     if (!this.canExecuteDownwardAttack()) {
       return false;

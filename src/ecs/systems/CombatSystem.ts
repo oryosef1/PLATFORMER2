@@ -66,15 +66,28 @@ export class CombatSystem {
         const hurtbox = targetEntity.getComponent<HurtboxComponent>('hurtbox');
         if (!hurtbox || !hurtbox.vulnerable || hurtbox.isDead()) continue;
 
+        // Check if target is an enemy with dead AI state - dead enemies cannot be damaged
+        const targetAI = targetEntity.getComponent('enemyAI') as any;
+        if (targetAI && targetAI.state === 'dead') {
+          console.log(`[COMBAT_DEBUG] Skipping dead enemy ${targetEntity.id} (AI state: dead)`);
+          continue;
+        }
+
         // Don't allow self-damage (same owner)
         if (hitbox.owner === hurtbox.owner) continue;
+
+        // Check if this target has already been hit by this hitbox
+        if (hitbox.hitTargets.has(targetEntity.id)) {
+          console.log(`[COMBAT_DEBUG] Target ${targetEntity.id} already hit by this attack`);
+          continue;
+        }
 
         // Check for collision
         const hitboxAABB = hitbox.getAABB();
         const hurtboxAABB = hurtbox.getAABB();
-        console.log(`[COMBAT_DEBUG] Checking collision:`);
-        console.log(`[COMBAT_DEBUG] Hitbox (${attackerEntity.id}): x=${hitboxAABB.x}, y=${hitboxAABB.y}, w=${hitboxAABB.width}, h=${hitboxAABB.height}`);
-        console.log(`[COMBAT_DEBUG] Hurtbox (${targetEntity.id}): x=${hurtboxAABB.x}, y=${hurtboxAABB.y}, w=${hurtboxAABB.width}, h=${hurtboxAABB.height}`);
+        console.log(`[COMBAT_DEBUG] Checking collision between ${attackerEntity.id} and ${targetEntity.id}:`);
+        console.log(`[COMBAT_DEBUG] Hitbox active: ${hitbox.active}, duration: ${hitbox.duration}/${hitbox.maxDuration}`);
+        console.log(`[COMBAT_DEBUG] Hurtbox vulnerable: ${hurtbox.vulnerable}, health: ${hurtbox.currentHealth}/${hurtbox.maxHealth}`);
         
         if (this.checkCollision(hitboxAABB, hurtboxAABB)) {
           console.log(`[COMBAT_DEBUG] Collision detected! Processing combat...`);
@@ -114,6 +127,10 @@ export class CombatSystem {
     if (!damageDealt) {
       return null; // No damage dealt (blocked by invincibility)
     }
+
+    // Mark this target as hit by this hitbox to prevent multiple hits
+    hitbox.hitTargets.add(targetEntity.id);
+    console.log(`[COMBAT_DEBUG] Added ${targetEntity.id} to hitTargets for hitbox ${hitbox.owner}`);
     
     // Trigger visual feedback for enemy damage
     if ((targetEntity as any).startDamageFlash) {

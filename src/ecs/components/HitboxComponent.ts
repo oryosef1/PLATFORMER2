@@ -28,6 +28,7 @@ export class HitboxComponent implements IComponent {
   public maxDuration: number;
   public knockbackForce: number;
   public criticalChance: number;
+  public hitTargets: Set<string>; // Track entity IDs that have already been hit
 
   constructor(data: HitboxData) {
     this.x = data.x;
@@ -42,6 +43,7 @@ export class HitboxComponent implements IComponent {
     this.maxDuration = this.duration;
     this.knockbackForce = data.knockbackForce || 50;
     this.criticalChance = data.criticalChance || 0;
+    this.hitTargets = new Set<string>();
   }
 
   public updatePosition(x: number, y: number): void {
