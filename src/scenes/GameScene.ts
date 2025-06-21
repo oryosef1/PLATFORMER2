@@ -2,24 +2,36 @@ import Phaser from 'phaser';
 import { InputManager } from '../input/InputManager';
 import { PlayerEntity } from '../entities/PlayerEntity';
 import { PlatformEntity } from '../entities/PlatformEntity';
+import { TestEnemyEntity } from '../entities/TestEnemyEntity';
 import { PositionComponent } from '../ecs/components/PositionComponent';
 import { VelocityComponent } from '../ecs/components/VelocityComponent';
 import { CollisionComponent } from '../ecs/components/CollisionComponent';
 import { CollisionSystem } from '../ecs/systems/CollisionSystem';
+import { CombatSystem } from '../ecs/systems/CombatSystem';
 import { DebugCollision } from '../utils/DebugCollision';
+import { MovementConstants } from '../physics/MovementConstants';
 
 export class GameScene extends Phaser.Scene {
   private playerVisual!: Phaser.GameObjects.Rectangle;
   private playerEntity!: PlayerEntity;
   private platformEntities: PlatformEntity[] = [];
   private platformVisuals: Phaser.GameObjects.Rectangle[] = [];
+  private testEnemyEntity!: TestEnemyEntity;
+  private testEnemyVisual!: Phaser.GameObjects.Rectangle;
+  private swordVisual!: Phaser.GameObjects.Rectangle;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private inputManager!: InputManager;
   private inputDebugText!: Phaser.GameObjects.Text;
   private playerDebugText!: Phaser.GameObjects.Text;
   private collisionSystem!: CollisionSystem;
+  private combatSystem!: CombatSystem;
   private debugCollision!: DebugCollision;
   private debugModeEnabled: boolean = true;
+  
+  // Combat debug visuals
+  private playerHurtboxDebug!: Phaser.GameObjects.Rectangle;
+  private playerHitboxDebug!: Phaser.GameObjects.Rectangle;
+  private enemyHurtboxDebug!: Phaser.GameObjects.Rectangle;
   
   // Stamina UI elements
   private staminaBarBackground!: Phaser.GameObjects.Rectangle;
@@ -34,6 +46,10 @@ export class GameScene extends Phaser.Scene {
     // Initialize collision system
     this.collisionSystem = new CollisionSystem(64); // 64px spatial hash cells
     console.log('[GAME] CollisionSystem initialized');
+    
+    // Initialize combat system
+    this.combatSystem = new CombatSystem();
+    console.log('[GAME] CombatSystem initialized');
     
     // Initialize debug collision visualization
     this.debugCollision = new DebugCollision(this);
@@ -75,7 +91,8 @@ export class GameScene extends Phaser.Scene {
     // Player height is 48, so player center should be at Y=684-24=660
     this.playerEntity = new PlayerEntity(200, 660); // Start on ground platform
     this.collisionSystem.addEntity(this.playerEntity);
-    console.log('[GAME] PlayerEntity created at ground level and added to collision system');
+    this.combatSystem.addEntity(this.playerEntity);
+    console.log('[GAME] PlayerEntity created at ground level and added to collision and combat systems');
     
     // Create visual representation for player (no physics body needed)
     const playerVisual = this.playerEntity.getVisual();
@@ -89,6 +106,28 @@ export class GameScene extends Phaser.Scene {
     
     // Set player depth to render on top of platforms
     this.playerVisual.setDepth(100);
+    
+    // Create sword visual (initially hidden) - made slightly longer
+    this.swordVisual = this.add.rectangle(0, 0, 40, 16, 0xc0c0c0); // Silver color for sword, longer width
+    this.swordVisual.setDepth(110); // Above player
+    this.swordVisual.setVisible(false); // Hidden by default
+    
+    // Create test enemy for combat testing
+    this.testEnemyEntity = new TestEnemyEntity(600, 660, 32, 32); // On ground platform, away from walls
+    this.collisionSystem.addEntity(this.testEnemyEntity); // Add to collision system so player can interact with it
+    this.combatSystem.addEntity(this.testEnemyEntity);
+    console.log('[GAME] Test enemy created and added to collision and combat systems');
+    
+    // Create visual for test enemy
+    const enemyVisual = this.testEnemyEntity.getVisual();
+    this.testEnemyVisual = this.add.rectangle(
+      enemyVisual.x,
+      enemyVisual.y,
+      enemyVisual.width,
+      enemyVisual.height,
+      0xff6b35 // Orange color for enemy
+    );
+    this.testEnemyVisual.setDepth(50); // Between platforms and player
     
     // Create cursor keys (arrow keys only)
     this.cursors = this.input.keyboard!.createCursorKeys();
@@ -105,14 +144,15 @@ export class GameScene extends Phaser.Scene {
     this.add.text(10, 130, 'UP while on wall for wall jump', { fontSize: '14px', color: '#ffffff' });
     this.add.text(10, 150, 'X to dash (facing direction), X+DOWN for down dash', { fontSize: '14px', color: '#ffffff' });
     this.add.text(10, 170, 'SHIFT to sprint (hold)', { fontSize: '14px', color: '#ffffff' });
-    this.add.text(10, 190, 'C - Toggle collision debug', { fontSize: '12px', color: '#ffff00' });
-    this.add.text(10, 210, 'Check console for debugging', { fontSize: '12px', color: '#ffff00' });
+    this.add.text(10, 190, 'Z to attack (melee)', { fontSize: '14px', color: '#ffffff' });
+    this.add.text(10, 210, 'C - Toggle collision debug', { fontSize: '12px', color: '#ffff00' });
+    this.add.text(10, 230, 'Check console for debugging', { fontSize: '12px', color: '#ffff00' });
     
     // Add debug controls
     this.input.keyboard!.on('keydown-C', () => {
       this.debugModeEnabled = !this.debugModeEnabled;
       this.debugCollision.setEnabled(this.debugModeEnabled);
-      console.log(`[DEBUG] Collision debug: ${this.debugModeEnabled ? 'ON' : 'OFF'}`);
+      console.log(`[DEBUG] Debug mode: ${this.debugModeEnabled ? 'ON' : 'OFF'}`);
     });
     
     // Player position debug
@@ -168,6 +208,9 @@ export class GameScene extends Phaser.Scene {
     this.staminaBarText.setOrigin(0.5, 0.5);
     this.staminaBarText.setDepth(201);
     
+    // Create combat debug visuals
+    this.createCombatDebugVisuals();
+    
     // Update debug info every frame
     this.events.on('update', () => {
       const position = this.playerEntity.getComponent('position') as PositionComponent;
@@ -192,7 +235,10 @@ export class GameScene extends Phaser.Scene {
         `Wall Recent: ${playerDebug.wall.recentContact} | Jump Cooldown: ${playerDebug.wall.jumpCooldown}\n` +
         `Dash: ${playerDebug.dash.dashing} | Duration: ${playerDebug.dash.duration} | Cooldown: ${playerDebug.dash.cooldown}\n` +
         `Dash Invincible: ${playerDebug.dash.invincible} | Sprint: ${playerDebug.sprint.sprinting}\n` +
-        `Stamina: ${playerDebug.sprint.stamina}/${playerDebug.sprint.maxStamina} | Can Sprint: ${playerDebug.sprint.canSprint}`
+        `Stamina: ${playerDebug.sprint.stamina}/${playerDebug.sprint.maxStamina} | Can Sprint: ${playerDebug.sprint.canSprint}\n` +
+        `Attack: ${playerDebug.combat.attacking} | Frames: ${playerDebug.combat.attackFrames} | Cooldown: ${playerDebug.combat.attackCooldown}\n` +
+        `Health: ${playerDebug.combat.health}/${playerDebug.combat.maxHealth} | Can Attack: ${playerDebug.combat.canAttack}\n` +
+        `Enemy Health: ${this.testEnemyEntity.getCurrentHealth()}/${this.testEnemyEntity.getMaxHealth()}`
       );
       
       // Update stamina bar
@@ -208,6 +254,7 @@ export class GameScene extends Phaser.Scene {
     const wasUpPressed = this.inputManager.isKeyJustPressed('ArrowUp') || (this.cursors.up ? Phaser.Input.Keyboard.JustDown(this.cursors.up) : false);
     const wasUpReleased = this.inputManager.isKeyJustReleased('ArrowUp') || (this.cursors.up ? Phaser.Input.Keyboard.JustUp(this.cursors.up) : false);
     const wasDashPressed = this.inputManager.isKeyJustPressed('KeyX'); // X key for dash
+    const wasAttackPressed = this.inputManager.isKeyJustPressed('KeyZ'); // Z key for attack
     const sprintPressed = this.inputManager.isKeyDown('ShiftLeft') || this.inputManager.isKeyDown('ShiftRight'); // Shift for sprint
     
     // Now update InputManager (this clears justPressed flags)
@@ -319,6 +366,15 @@ export class GameScene extends Phaser.Scene {
       }
     }
     
+    // Handle attack input
+    if (wasAttackPressed) {
+      if (this.playerEntity.executeAttack()) {
+        console.log('[COMBAT] Attack executed');
+      } else {
+        console.log('[COMBAT] Attack failed - already attacking');
+      }
+    }
+    
     // SIMPLIFIED COLLISION SYSTEM - Apply movement first, then detect and resolve
     
     // Step 1: Apply movement to player
@@ -333,8 +389,53 @@ export class GameScene extends Phaser.Scene {
     position.x += velocity.x * deltaSeconds;
     position.y += velocity.y * deltaSeconds;
     
+    // Step 1.5: Apply physics to enemy (gravity)
+    const enemyPosition = this.testEnemyEntity.getComponent<PositionComponent>('position')!;
+    const enemyVelocity = this.testEnemyEntity.getComponent<VelocityComponent>('velocity')!;
+    
+    // Apply gravity to enemy
+    enemyVelocity.y += MovementConstants.GRAVITY * deltaSeconds;
+    if (enemyVelocity.y > MovementConstants.TERMINAL_VELOCITY) {
+      enemyVelocity.y = MovementConstants.TERMINAL_VELOCITY;
+    }
+    
+    // Apply friction to enemy horizontal movement (stops sliding)
+    enemyVelocity.x *= 0.8; // Strong friction for quick stop
+    if (Math.abs(enemyVelocity.x) < 1) {
+      enemyVelocity.x = 0; // Stop very small movements
+    }
+    
+    // Apply enemy movement
+    enemyPosition.x += enemyVelocity.x * deltaSeconds;
+    enemyPosition.y += enemyVelocity.y * deltaSeconds;
+    
+    // Update enemy (for damage flash timing etc.)
+    this.testEnemyEntity.update(deltaSeconds);
+    
     // Step 2: Check for collisions after movement
     const collisions = this.collisionSystem.update(deltaSeconds);
+    
+    // Step 2.5: Process combat interactions
+    const combatResults = this.combatSystem.update();
+    if (combatResults.length > 0) {
+      console.log(`[COMBAT] Processed ${combatResults.length} combat interactions`);
+      for (const result of combatResults) {
+        console.log(`[COMBAT] ${result.attacker.id} dealt ${result.damage} damage to ${result.target.id}`);
+      }
+    }
+    
+    // Step 2.6: Handle enemy death and respawn
+    if (this.testEnemyEntity.isDead()) {
+      console.log(`[ENEMY] Enemy died - respawning in 3 seconds`);
+      // Reset enemy to full health and move to original position
+      this.testEnemyEntity.heal(this.testEnemyEntity.getMaxHealth());
+      const enemyPos = this.testEnemyEntity.getComponent<PositionComponent>('position')!;
+      const enemyVel = this.testEnemyEntity.getComponent<VelocityComponent>('velocity')!;
+      enemyPos.x = 600; // Original spawn position
+      enemyPos.y = 660; // Original spawn position 
+      enemyVel.x = 0;   // Reset velocity
+      enemyVel.y = 0;   // Reset velocity
+    }
     
     // Step 3: Process and resolve collisions
     let touchingWallLeft = false;
@@ -342,8 +443,26 @@ export class GameScene extends Phaser.Scene {
     
     for (const collision of collisions) {
       if (collision.entityA === this.playerEntity || collision.entityB === this.playerEntity) {
-        const platform = collision.entityA === this.playerEntity ? collision.entityB : collision.entityA;
+        const other = collision.entityA === this.playerEntity ? collision.entityB : collision.entityA;
         
+        // Check if colliding with enemy
+        if (other === this.testEnemyEntity) {
+          // Player touching enemy - apply damage and knockback only if vulnerable
+          if (this.playerEntity.isVulnerable()) {
+            const playerPos = this.playerEntity.getComponent('position') as PositionComponent;
+            const enemyPos = other.getComponent('position') as PositionComponent;
+            const knockbackDirection = enemyPos.x > playerPos.x ? -1 : 1; // Push away from enemy
+            if (this.playerEntity.takeDamage(10, knockbackDirection)) {
+              console.log(`[COMBAT] Player hit by enemy - damage and knockback applied (direction: ${knockbackDirection})`);
+            }
+          } else {
+            console.log(`[COMBAT] Player touching enemy but invincible - no damage`);
+          }
+          // Enemy is always solid regardless of damage/invincibility - continue with collision resolution
+          console.log(`[COLLISION] Processing enemy as solid collision`);
+        }
+        
+        const platform = other; // Treat as platform for collision resolution
         // console.log(`[COLLISION] Player collision detected:`);
         // console.log(`[COLLISION] Normal: ${collision.collisionInfo.normalX}, ${collision.collisionInfo.normalY}`);
         // console.log(`[COLLISION] Overlap: ${collision.collisionInfo.overlapX.toFixed(1)}, ${collision.collisionInfo.overlapY.toFixed(1)}`);
@@ -368,22 +487,64 @@ export class GameScene extends Phaser.Scene {
           velocity.y = 0;
           console.log('[COLLISION] Player hit ceiling');
         } else if (collision.collisionInfo.normalX !== 0) {
-          // Side collision - wall detected
+          // Side collision - wall detected (including enemies)
           if (collision.collisionInfo.normalX === -1) {
-            // Hitting wall on the right (normal points left)
+            // Hitting wall/enemy on the right (normal points left)
             const correctionX = collision.collisionInfo.overlapX + 0.1;
             position.x -= correctionX;
-            touchingWallRight = true;
-            console.log('[COLLISION] Player hit RIGHT wall');
+            if (other === this.testEnemyEntity) {
+              console.log('[COLLISION] Player pushed LEFT by enemy');
+            } else {
+              touchingWallRight = true;
+              console.log('[COLLISION] Player hit RIGHT wall');
+            }
           } else {
-            // Hitting wall on the left (normal points right)
+            // Hitting wall/enemy on the left (normal points right)
             const correctionX = collision.collisionInfo.overlapX + 0.1;
             position.x += correctionX;
-            touchingWallLeft = true;
-            console.log('[COLLISION] Player hit LEFT wall');
+            if (other === this.testEnemyEntity) {
+              console.log('[COLLISION] Player pushed RIGHT by enemy');
+            } else {
+              touchingWallLeft = true;
+              console.log('[COLLISION] Player hit LEFT wall');
+            }
           }
-          velocity.x = 0;
+          // Only set velocity to 0 for walls, not for enemies (let knockback work)
+          if (other !== this.testEnemyEntity) {
+            velocity.x = 0;
+          }
           console.log(`[COLLISION] Wall contact - Left: ${touchingWallLeft}, Right: ${touchingWallRight}`);
+        }
+      }
+      // Handle collisions involving the test enemy
+      else if (collision.entityA === this.testEnemyEntity || collision.entityB === this.testEnemyEntity) {
+        const enemy = collision.entityA === this.testEnemyEntity ? collision.entityA : collision.entityB;
+        const other = collision.entityA === this.testEnemyEntity ? collision.entityB : collision.entityA;
+        const enemyPosition = enemy.getComponent('position') as PositionComponent;
+        const enemyVelocity = enemy.getComponent('velocity') as VelocityComponent;
+        
+        // Handle enemy collision resolution
+        if (collision.collisionInfo.normalY === -1 && enemyVelocity.y >= 0) {
+          // Enemy landing on platform
+          const correctionY = collision.collisionInfo.overlapY + 0.1;
+          enemyPosition.y -= correctionY;
+          enemyVelocity.y = 0;
+          // Only log when significant landing (not oscillation)
+          if (collision.collisionInfo.overlapY > 5) {
+            console.log('[COLLISION] Enemy landed on platform');
+          }
+        } else if (collision.collisionInfo.normalX !== 0) {
+          // Enemy side collision
+          if (collision.collisionInfo.normalX === -1) {
+            const correctionX = collision.collisionInfo.overlapX + 0.1;
+            enemyPosition.x -= correctionX;
+            console.log('[COLLISION] Enemy hit wall (right side)');
+          } else {
+            const correctionX = collision.collisionInfo.overlapX + 0.1;
+            enemyPosition.x += correctionX;
+            console.log('[COLLISION] Enemy hit wall (left side)');
+          }
+          enemyVelocity.x = 0;
         }
       }
     }
@@ -432,19 +593,89 @@ export class GameScene extends Phaser.Scene {
     // Update player entity visual position only (movement already applied above)
     this.playerEntity.update(deltaSeconds);
     
+    // Update test enemy
+    this.testEnemyEntity.update(deltaSeconds);
+    
+    // Check if player is dead and respawn if needed
+    if (this.playerEntity.isDead()) {
+      console.log('[GAME] Player died - respawning...');
+      this.playerEntity.respawn(200, 660); // Respawn at starting position
+    }
+    
     // Get final position from ECS for visual sync
     const finalPosition = this.playerEntity.getComponent('position') as PositionComponent;
     const finalVelocity = this.playerEntity.getComponent('velocity') as VelocityComponent;
     
-    // Update Phaser visual position directly
+    // Update Phaser visual positions directly
     this.playerVisual.x = finalPosition.x;
     this.playerVisual.y = finalPosition.y;
     
+    // Update player visual for invincibility feedback
+    this.updatePlayerVisualEffects();
+    
+    // Update sword visual position and visibility
+    this.updateSwordVisual(finalPosition);
+    
+    // Update combat debug visuals
+    this.updateCombatDebugVisuals();
+    
+    const enemyVisualPosition = this.testEnemyEntity.getComponent('position') as PositionComponent;
+    this.testEnemyVisual.x = enemyVisualPosition.x;
+    this.testEnemyVisual.y = enemyVisualPosition.y;
+    
+    // Update enemy visual effects
+    this.updateEnemyVisualEffects();
+    
     // Update debug collision visualization
-    const allEntities = [this.playerEntity, ...this.platformEntities];
+    const allEntities = [this.playerEntity, this.testEnemyEntity, ...this.platformEntities];
     this.debugCollision.update(allEntities, collisions, 64);
     
     console.log(`[SYNC] ECS pos: (${finalPosition.x.toFixed(1)}, ${finalPosition.y.toFixed(1)}) vel: (${finalVelocity.x.toFixed(1)}, ${finalVelocity.y.toFixed(1)})`);
+  }
+  
+  private updatePlayerVisualEffects(): void {
+    // Show invincibility with flashing effect
+    if (!this.playerEntity.isVulnerable()) {
+      // Flash between visible and semi-transparent
+      const flashRate = 8; // frames between flashes
+      const currentFrame = this.game.loop.frame;
+      const isVisible = Math.floor(currentFrame / flashRate) % 2 === 0;
+      this.playerVisual.setAlpha(isVisible ? 0.3 : 1.0);
+      this.playerVisual.setFillStyle(0xff0000); // Red tint when invincible
+    } else {
+      // Normal appearance
+      this.playerVisual.setAlpha(1.0);
+      this.playerVisual.setFillStyle(0xe74c3c); // Normal red color
+    }
+  }
+  
+  private updateSwordVisual(playerPosition: PositionComponent): void {
+    if (this.playerEntity.isAttacking()) {
+      // Show sword visual during attack
+      this.swordVisual.setVisible(true);
+      
+      // Position sword to match hitbox exactly
+      const facingDirection = this.playerEntity.getFacingDirection();
+      const playerHalfWidth = 32 / 2; // Player is 32 pixels wide
+      const swordGap = 4; // Small gap between player and sword
+      const swordWidth = 40; // Sword dimensions
+      const swordHeight = 16;
+      
+      // Calculate hitbox center position (this is where the hitbox rectangle is centered)
+      const hitboxCenterX = playerPosition.x + (facingDirection * (playerHalfWidth + swordGap));
+      const hitboxCenterY = playerPosition.y;
+      
+      // Position sword visual at the same center point as hitbox
+      // (Phaser rectangles are positioned by their center by default)
+      this.swordVisual.x = hitboxCenterX;
+      this.swordVisual.y = hitboxCenterY;
+      
+      // Optional: Add visual effects
+      this.swordVisual.setFillStyle(0xffffff); // White color for sword swing
+    } else {
+      // Hide sword when not attacking
+      this.swordVisual.setVisible(false);
+    }
   }
   
   private updateStaminaBar(sprintInfo: any): void {
@@ -476,6 +707,73 @@ export class GameScene extends Phaser.Scene {
       this.staminaBarText.setColor('#00ff00'); // Green when sprinting
     } else {
       this.staminaBarText.setColor('#ffffff'); // White when not sprinting
+    }
+  }
+  
+  private createCombatDebugVisuals(): void {
+    // Player hurtbox (blue outline)
+    this.playerHurtboxDebug = this.add.rectangle(0, 0, 32, 48, 0x0000ff, 0);
+    this.playerHurtboxDebug.setStrokeStyle(2, 0x0000ff);
+    this.playerHurtboxDebug.setDepth(300);
+    this.playerHurtboxDebug.setVisible(this.debugModeEnabled);
+    
+    // Player hitbox (red outline) 
+    this.playerHitboxDebug = this.add.rectangle(0, 0, 32, 16, 0xff0000, 0);
+    this.playerHitboxDebug.setStrokeStyle(2, 0xff0000);
+    this.playerHitboxDebug.setDepth(300);
+    this.playerHitboxDebug.setVisible(false); // Only show when attacking
+    
+    // Enemy hurtbox (yellow outline)
+    this.enemyHurtboxDebug = this.add.rectangle(0, 0, 32, 32, 0xffff00, 0);
+    this.enemyHurtboxDebug.setStrokeStyle(2, 0xffff00);
+    this.enemyHurtboxDebug.setDepth(300);
+    this.enemyHurtboxDebug.setVisible(this.debugModeEnabled);
+  }
+  
+  private updateCombatDebugVisuals(): void {
+    if (!this.debugModeEnabled) {
+      this.playerHurtboxDebug.setVisible(false);
+      this.playerHitboxDebug.setVisible(false);
+      this.enemyHurtboxDebug.setVisible(false);
+      return;
+    }
+    
+    // Update player hurtbox
+    const playerPos = this.playerEntity.getComponent('position') as PositionComponent;
+    const playerHurtbox = this.playerEntity.getComponent('hurtbox');
+    if (playerHurtbox) {
+      this.playerHurtboxDebug.setPosition(playerPos.x, playerPos.y);
+      this.playerHurtboxDebug.setVisible(true);
+    }
+    
+    // Update player hitbox (only when attacking)
+    const playerHitbox = this.playerEntity.getComponent('hitbox');
+    if (playerHitbox && playerHitbox.active) {
+      const hitboxAABB = playerHitbox.getAABB();
+      this.playerHitboxDebug.setPosition(hitboxAABB.x + hitboxAABB.width/2, hitboxAABB.y + hitboxAABB.height/2);
+      this.playerHitboxDebug.setSize(hitboxAABB.width, hitboxAABB.height);
+      this.playerHitboxDebug.setVisible(true);
+    } else {
+      this.playerHitboxDebug.setVisible(false);
+    }
+    
+    // Update enemy hurtbox
+    const enemyPos = this.testEnemyEntity.getComponent('position') as PositionComponent;
+    const enemyHurtbox = this.testEnemyEntity.getComponent('hurtbox');
+    if (enemyHurtbox) {
+      this.enemyHurtboxDebug.setPosition(enemyPos.x, enemyPos.y);
+      this.enemyHurtboxDebug.setVisible(true);
+    }
+  }
+  
+  private updateEnemyVisualEffects(): void {
+    // Show damage flash effect
+    if (this.testEnemyEntity.isDamageFlashing()) {
+      // Flash white when taking damage
+      this.testEnemyVisual.setFillStyle(0xffffff);
+    } else {
+      // Normal orange color
+      this.testEnemyVisual.setFillStyle(0xff6b35);
     }
   }
 }

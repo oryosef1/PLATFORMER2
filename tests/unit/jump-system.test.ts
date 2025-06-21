@@ -264,6 +264,10 @@ describe('Phase 2.2: Enhanced Jumping System Tests', () => {
       playerEntity.startJump();
       expect(playerEntity.isJumping()).toBe(true);
       
+      // Simulate being in air (jump system sets this when jumping starts)
+      playerEntity.setGroundState(false);
+      expect(playerEntity.isJumping()).toBe(true);
+      
       // Simulate landing
       playerEntity.setGroundState(true);
       const velocity = playerEntity.getComponent('velocity') as VelocityComponent;

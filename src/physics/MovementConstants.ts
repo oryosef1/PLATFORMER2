@@ -53,11 +53,16 @@ export class MovementConstants {
   public static readonly WALL_COYOTE_TIME_FRAMES = 6; // frames of grace period after leaving wall
   
   // Dash Mechanics
-  public static readonly DASH_DISTANCE = 120; // pixels (distance covered in dash)
+  public static readonly DASH_DISTANCE = 120; // pixels (distance covered in ground dash)
   public static readonly DASH_DURATION_FRAMES = 8; // frames dash lasts (about 0.13 seconds)
   public static readonly DASH_VELOCITY = 900; // pixels/second (calculated: 120px / (8 * 1/60)s = 900px/s)
   public static readonly DASH_COOLDOWN_FRAMES = 60; // frames before dash can be used again (1 second)
   public static readonly DASH_INVINCIBILITY_FRAMES = 6; // frames of invincibility during dash
+  
+  // Air Dash Mechanics (shorter, more controlled air movement)
+  public static readonly AIR_DASH_DISTANCE = 100; // pixels (increased from 70 for better mobility)
+  public static readonly AIR_DASH_DURATION_FRAMES = 8; // frames air dash lasts (increased from 7)
+  public static readonly AIR_DASH_VELOCITY = 750; // pixels/second (calculated: 100px / (8 * 1/60)s = 750px/s)
   
   // Sprint Mechanics
   public static readonly SPRINT_SPEED_MULTIPLIER = 1.5; // 150% of normal speed when sprinting
@@ -66,6 +71,9 @@ export class MovementConstants {
   public static readonly SPRINT_STAMINA_DRAIN_RATE = 2; // stamina points drained per frame while sprinting
   public static readonly SPRINT_STAMINA_REGEN_RATE = 1.5; // stamina points restored per frame when not sprinting
   public static readonly SPRINT_MIN_STAMINA = 10; // minimum stamina needed to start sprinting (reduced for smoother restart)
+  
+  // Combat Mechanics
+  public static readonly ATTACK_COOLDOWN_FRAMES = 15; // frames between attacks (0.25 seconds at 60fps)
 }
 
 console.log('[PHYSICS] MovementConstants loaded:', {

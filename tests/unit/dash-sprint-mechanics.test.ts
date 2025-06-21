@@ -155,7 +155,7 @@ describe('Phase 2.4: Dash and Sprint Mechanics Tests', () => {
       expect(player.canDash()).toBe(true);
       expect(player.executeDash(true)).toBe(true); // downward air dash
       
-      expect(velocity.y).toBe(MovementConstants.DASH_VELOCITY);
+      expect(velocity.y).toBe(MovementConstants.AIR_DASH_VELOCITY);
     });
 
     it('should work on ground', () => {

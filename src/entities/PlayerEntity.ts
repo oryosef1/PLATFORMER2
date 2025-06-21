@@ -3,6 +3,8 @@ import { PositionComponent } from '../ecs/components/PositionComponent';
 import { VelocityComponent } from '../ecs/components/VelocityComponent';
 import { InputComponent } from '../ecs/components/InputComponent';
 import { CollisionComponent } from '../ecs/components/CollisionComponent';
+import { HurtboxComponent } from '../ecs/components/HurtboxComponent';
+import { HitboxComponent } from '../ecs/components/HitboxComponent';
 import { MovementConstants } from '../physics/MovementConstants';
 
 export interface PlayerVisual {
@@ -46,6 +48,11 @@ export class PlayerEntity extends Entity {
 
   // Player facing direction
   private facingDirection: number = 1; // 1 for right, -1 for left
+  
+  // Combat state
+  private attacking: boolean = false;
+  private attackFrames: number = 0;
+  private attackCooldownFrames: number = 0;
 
   constructor(x: number = 100, y: number = 100) {
     super();
@@ -63,6 +70,18 @@ export class PlayerEntity extends Entity {
       false, // isStatic
       'player' // layer
     ));
+    
+    // Add combat component (hurtbox for taking damage)
+    this.addComponent('hurtbox', new HurtboxComponent({
+      x: x,
+      y: y,
+      width: MovementConstants.PLAYER_WIDTH,
+      height: MovementConstants.PLAYER_HEIGHT,
+      maxHealth: 100,
+      defense: 0,
+      owner: this.id,
+      maxInvincibilityFrames: 30
+    }));
     
     // Setup input component with default bindings
     const inputComponent = new InputComponent({
@@ -89,7 +108,7 @@ export class PlayerEntity extends Entity {
     
     // CRITICAL: Don't apply movement when dashing - dash controls velocity completely
     if (this.dashing) {
-      console.log(`[PLAYER] Movement blocked - dashing for ${this.dashDurationFrames} more frames`);
+      console.log(`[DASH_BLOCK] Movement blocked - dashing for ${this.dashDurationFrames} more frames, direction attempted: ${direction}`);
       return;
     }
     
@@ -282,7 +301,13 @@ export class PlayerEntity extends Entity {
       if (this.dashDurationFrames <= 0) {
         this.dashing = false;
         this.dashCooldownFrames = MovementConstants.DASH_COOLDOWN_FRAMES;
-        console.log('[PLAYER] Dash ended - cooldown started');
+        
+        // CRITICAL: Clear dash velocity when dash ends to prevent momentum carry-over
+        const velocity = this.getComponent('velocity') as VelocityComponent;
+        velocity.x = 0;
+        velocity.y = 0;
+        
+        console.log('[PLAYER] Dash ended - velocity cleared, cooldown started');
       }
     } else if (this.dashCooldownFrames > 0) {
       // Only update cooldown if not currently dashing
@@ -312,6 +337,32 @@ export class PlayerEntity extends Entity {
       this.stamina += MovementConstants.SPRINT_STAMINA_REGEN_RATE;
       if (this.stamina > MovementConstants.SPRINT_STAMINA_MAX) {
         this.stamina = MovementConstants.SPRINT_STAMINA_MAX;
+      }
+    }
+    
+    // Update attack state
+    if (this.attackFrames > 0) {
+      this.attackFrames--;
+      
+      // Update hitbox position while attacking so it follows the player
+      this.updateAttackHitboxPosition();
+      
+      if (this.attackFrames <= 0) {
+        this.attacking = false;
+        this.attackCooldownFrames = MovementConstants.ATTACK_COOLDOWN_FRAMES;
+        // Remove hitbox component if it exists
+        if (this.hasComponent('hitbox')) {
+          this.removeComponent('hitbox');
+          console.log('[COMBAT] Attack ended - hitbox removed, cooldown started');
+        }
+      }
+    }
+    
+    // Update attack cooldown
+    if (this.attackCooldownFrames > 0) {
+      this.attackCooldownFrames--;
+      if (this.attackCooldownFrames <= 0) {
+        console.log('[COMBAT] Attack cooldown expired - can attack again');
       }
     }
     
@@ -639,24 +690,33 @@ export class PlayerEntity extends Entity {
     
     const velocity = this.getComponent('velocity') as VelocityComponent;
     
+    // Use different dash properties based on whether player is grounded or in air
+    const isAirDash = !this.isGrounded;
+    const dashVelocity = isAirDash ? MovementConstants.AIR_DASH_VELOCITY : MovementConstants.DASH_VELOCITY;
+    const dashDuration = isAirDash ? MovementConstants.AIR_DASH_DURATION_FRAMES : MovementConstants.DASH_DURATION_FRAMES;
+    
     // Dash in facing direction (Hollow Knight style)
     let velX = 0;
     let velY = 0;
     
     if (downward) {
       // Downward dash (like Dashmaster charm)
-      velY = MovementConstants.DASH_VELOCITY;
-      console.log('[PLAYER] Dash executed - direction: down');
+      velY = dashVelocity;
+      const dashType = isAirDash ? 'air' : 'ground';
+      console.log(`[PLAYER] Dash executed - direction: down (${dashType})`);
     } else {
       // Horizontal dash in facing direction
-      velX = this.facingDirection * MovementConstants.DASH_VELOCITY;
+      velX = this.facingDirection * dashVelocity;
+      // CRITICAL: For horizontal dash, set Y velocity to 0 to prevent gravity/downward movement
+      velY = 0;
       const direction = this.facingDirection > 0 ? 'right' : 'left';
-      console.log(`[PLAYER] Dash executed - direction: ${direction} (facing)`);
+      const dashType = isAirDash ? 'air' : 'ground';
+      console.log(`[PLAYER] Dash executed - direction: ${direction} (${dashType}) - Y velocity forced to 0`);
     }
     
     // Set dash state
     this.dashing = true;
-    this.dashDurationFrames = MovementConstants.DASH_DURATION_FRAMES;
+    this.dashDurationFrames = dashDuration;
     this.dashInvincibilityFrames = MovementConstants.DASH_INVINCIBILITY_FRAMES;
     
     // CRITICAL: Clear all existing velocity before applying dash velocity
@@ -664,7 +724,7 @@ export class PlayerEntity extends Entity {
     velocity.x = velX;
     velocity.y = velY;
     
-    console.log(`[PLAYER] Dash velocity: (${velX.toFixed(1)}, ${velY.toFixed(1)})`);
+    console.log(`[PLAYER] Dash velocity set: (${velX.toFixed(1)}, ${velY.toFixed(1)}) - Expected distance: ${isAirDash ? MovementConstants.AIR_DASH_DISTANCE : MovementConstants.DASH_DISTANCE}px`);
     return true;
   }
   
@@ -715,9 +775,186 @@ export class PlayerEntity extends Entity {
     return this.stamina;
   }
 
+  // Combat System Methods
+  
+  public getCurrentHealth(): number {
+    const hurtbox = this.getComponent<HurtboxComponent>('hurtbox');
+    return hurtbox ? hurtbox.currentHealth : 0;
+  }
+  
+  public getMaxHealth(): number {
+    const hurtbox = this.getComponent<HurtboxComponent>('hurtbox');
+    return hurtbox ? hurtbox.maxHealth : 0;
+  }
+  
+  public getHealthPercentage(): number {
+    const hurtbox = this.getComponent<HurtboxComponent>('hurtbox');
+    return hurtbox ? hurtbox.getHealthPercentage() : 0;
+  }
+  
+  public isDead(): boolean {
+    const hurtbox = this.getComponent<HurtboxComponent>('hurtbox');
+    return hurtbox ? hurtbox.isDead() : false;
+  }
+  
+  public isVulnerable(): boolean {
+    const hurtbox = this.getComponent<HurtboxComponent>('hurtbox');
+    return hurtbox ? hurtbox.vulnerable : true;
+  }
+  
+  public heal(amount: number): void {
+    const hurtbox = this.getComponent<HurtboxComponent>('hurtbox');
+    if (hurtbox) {
+      hurtbox.heal(amount);
+    }
+  }
+  
+  public respawn(x: number = 200, y: number = 660): void {
+    // Reset position
+    const position = this.getComponent<PositionComponent>('position');
+    if (position) {
+      position.x = x;
+      position.y = y;
+    }
+    
+    // Reset velocity
+    const velocity = this.getComponent<VelocityComponent>('velocity');
+    if (velocity) {
+      velocity.x = 0;
+      velocity.y = 0;
+    }
+    
+    // Reset health
+    const hurtbox = this.getComponent<HurtboxComponent>('hurtbox');
+    if (hurtbox) {
+      hurtbox.currentHealth = hurtbox.maxHealth;
+      hurtbox.vulnerable = true;
+      hurtbox.invincibilityFrames = 0;
+    }
+    
+    // Reset states
+    this.isGrounded = true;
+    this.hasDoubleJump = true;
+    this.dashCooldownFrames = 0;
+    this.attackCooldownFrames = 0;
+    this.attacking = false;
+    
+    console.log(`[PLAYER] Respawned at (${x}, ${y}) with full health`);
+  }
+  
+  public takeDamage(amount: number, knockbackDirection: number = 0): boolean {
+    const hurtbox = this.getComponent<HurtboxComponent>('hurtbox');
+    if (hurtbox && hurtbox.vulnerable) {
+      const damaged = hurtbox.takeDamage(amount);
+      if (damaged) {
+        // Apply knockback
+        if (knockbackDirection !== 0) {
+          const velocity = this.getComponent<VelocityComponent>('velocity');
+          if (velocity) {
+            // Apply only velocity knockback - let collision system handle position
+            const knockbackForce = 400; // pixels/second (increased since no position knockback)
+            velocity.x = knockbackDirection * knockbackForce;
+            velocity.y = -150; // Add upward velocity for better separation
+            console.log(`[COMBAT] Player took ${amount} damage with knockback direction ${knockbackDirection}`);
+          }
+        }
+        return true;
+      }
+    }
+    return false;
+  }
+  
+  // Attack System Methods
+  
+  public canAttack(): boolean {
+    return !this.attacking && this.attackCooldownFrames <= 0;
+  }
+  
+  public executeAttack(): boolean {
+    if (!this.canAttack()) {
+      if (this.attacking) {
+        console.log('[COMBAT] Cannot attack - already attacking');
+      } else if (this.attackCooldownFrames > 0) {
+        console.log(`[COMBAT] Cannot attack - cooldown: ${this.attackCooldownFrames} frames`);
+      }
+      return false;
+    }
+    
+    const position = this.getComponent<PositionComponent>('position');
+    if (!position) {
+      console.log('[COMBAT] Cannot attack - no position component');
+      return false;
+    }
+    
+    // Create melee hitbox
+    const playerHalfWidth = MovementConstants.PLAYER_WIDTH / 2; // Player is 32 pixels wide
+    const swordGap = 4; // Small gap between player and sword (matches sword visual)
+    const hitboxWidth = 32;
+    const hitboxHeight = 16;
+    const attackDuration = 8; // frames
+    const attackDamage = 15;
+    
+    // Position hitbox right outside player boundary (matches sword visual)
+    const hitboxX = position.x + (this.facingDirection * (playerHalfWidth + swordGap));
+    const hitboxY = position.y;
+    
+    const hitbox = new HitboxComponent({
+      x: hitboxX,
+      y: hitboxY,
+      width: hitboxWidth,
+      height: hitboxHeight,
+      damage: attackDamage,
+      owner: this.id,
+      active: true,
+      type: 'melee',
+      duration: attackDuration,
+      knockbackForce: 75,
+      criticalChance: 0.1
+    });
+    
+    // Add hitbox component to player (replaces any existing hitbox)
+    this.addComponent('hitbox', hitbox);
+    
+    // Set attack state
+    this.attacking = true;
+    this.attackFrames = attackDuration;
+    
+    const direction = this.facingDirection > 0 ? 'right' : 'left';
+    console.log(`[COMBAT] Melee attack executed - direction: ${direction}, damage: ${attackDamage}, position: (${hitboxX}, ${hitboxY})`);
+    
+    return true;
+  }
+  
+  public isAttacking(): boolean {
+    return this.attacking;
+  }
+  
+  public getFacingDirection(): number {
+    return this.facingDirection;
+  }
+  
+  private updateAttackHitboxPosition(): void {
+    if (!this.attacking) return;
+    
+    const hitbox = this.getComponent<HitboxComponent>('hitbox');
+    const position = this.getComponent<PositionComponent>('position');
+    
+    if (hitbox && position) {
+      // Recalculate hitbox position to follow player
+      const playerHalfWidth = MovementConstants.PLAYER_WIDTH / 2;
+      const swordGap = 4;
+      const hitboxX = position.x + (this.facingDirection * (playerHalfWidth + swordGap));
+      const hitboxY = position.y;
+      
+      // Update hitbox position
+      hitbox.updatePosition(hitboxX, hitboxY);
+    }
+  }
+
   public getDebugInfo(): Record<string, any> {
     const position = this.getComponent('position') as PositionComponent;
     const velocity = this.getComponent('velocity') as VelocityComponent;
+    const hurtbox = this.getComponent<HurtboxComponent>('hurtbox');
     
     return {
       position: { x: position.x, y: position.y },
@@ -752,6 +989,18 @@ export class PlayerEntity extends Entity {
         stamina: this.stamina,
         maxStamina: MovementConstants.SPRINT_STAMINA_MAX,
         canSprint: this.canSprint()
+      },
+      combat: {
+        health: hurtbox ? hurtbox.currentHealth : 0,
+        maxHealth: hurtbox ? hurtbox.maxHealth : 0,
+        vulnerable: hurtbox ? hurtbox.vulnerable : true,
+        invincibilityFrames: hurtbox ? hurtbox.invincibilityFrames : 0,
+        defense: hurtbox ? hurtbox.defense : 0,
+        attacking: this.attacking,
+        attackFrames: this.attackFrames,
+        attackCooldown: this.attackCooldownFrames,
+        canAttack: this.canAttack(),
+        facingDirection: this.facingDirection
       }
     };
   }
